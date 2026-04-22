@@ -1,0 +1,42 @@
+description: Radio Medical Record prompt tests (response) — Ollama
+
+providers:
+  - id: ollama:chat:llama3.1
+    config:
+      temperature: 0.2
+      passthrough:
+        format: "json"
+
+prompts:
+  - prompts/response.txt
+
+tests:
+  - description: returns JSON with next_step_message
+    vars:
+      report_text: file://fixtures/report_minimal.txt
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: |
+          const match = (output || '').match(/\{[\s\S]*\}/);
+          if (!match) return false;
+          const out = JSON.parse(match[0]);
+          return (
+            out &&
+            typeof out.next_step_message === 'string' &&
+            Array.isArray(out.rationale_bullets) &&
+            Array.isArray(out.questions_for_participants)
+          );
+
+  - description: asks at least one question when report is sparse
+    vars:
+      report_text: file://fixtures/report_missing_vitals.txt
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: |
+          const match = (output || '').match(/\{[\s\S]*\}/);
+          if (!match) return false;
+          const out = JSON.parse(match[0]);
+          return Array.isArray(out.questions_for_participants) && out.questions_for_participants.length >= 1;
+

@@ -1,0 +1,42 @@
+description: Radio Medical Record prompt tests (review) — Ollama
+
+providers:
+  - id: ollama:chat:llama3.1
+    config:
+      temperature: 0.2
+      passthrough:
+        format: "json"
+
+prompts:
+  - prompts/review.txt
+
+tests:
+  - description: returns JSON with completeness score
+    vars:
+      report_text: file://fixtures/report_minimal.txt
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: |
+          const match = (output || '').match(/\{[\s\S]*\}/);
+          if (!match) return false;
+          const out = JSON.parse(match[0]);
+          return (
+            out &&
+            typeof out.completeness_score === 'number' &&
+            Array.isArray(out.deficiencies) &&
+            Array.isArray(out.safety_flags)
+          );
+
+  - description: penalizes missing vitals
+    vars:
+      report_text: file://fixtures/report_missing_vitals.txt
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: |
+          const match = (output || '').match(/\{[\s\S]*\}/);
+          if (!match) return false;
+          const out = JSON.parse(match[0]);
+          return typeof out.completeness_score === 'number' && out.completeness_score <= 70;
+

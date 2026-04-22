@@ -1,0 +1,21 @@
+.DS_Store
+
+# Python
+backend/.venv/
+**/__pycache__/
+*.pyc
+backend/.pytest_cache/
+backend/.chroma/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+promptfoo/node_modules/
+promptfoo/.promptfoo/
+
+# Promptfoo cache/artifacts
+promptfoo/.cache/
+
+# Env
+**/.env
+

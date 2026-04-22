@@ -1,0 +1,11 @@
+Name: Test Patient
+Ship name: MV Example
+Coordinates: 54.0N 1.2W
+
+Problem description: Patient fell and has chest pain and shortness of breath.
+
+Breathing: Fast. Oxygen saturation 93%.
+Pulse per min: 105. Blood pressure: 120/75.
+
+Actions performed: Oxygen via mask.
+
