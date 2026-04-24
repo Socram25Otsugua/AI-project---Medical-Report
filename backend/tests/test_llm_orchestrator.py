@@ -1,7 +1,7 @@
 import json
 from types import SimpleNamespace
 
-from app import llm_orchestrator
+from app.services import llm_orchestrator
 from app.memory import InMemorySessionStore
 
 

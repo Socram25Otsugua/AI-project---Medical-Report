@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from app import tools
+from app.services import tools
 
 
 def test_mcp_tools_delegate_to_mcp_client(monkeypatch):
