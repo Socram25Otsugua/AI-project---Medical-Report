@@ -28,8 +28,17 @@ def test_analyze_endpoint_mocked(monkeypatch):
             "questions_for_participants": ["What is the SpO2?"],
         }
 
+    def _fake_eval(*args, **kwargs):
+        return {
+            "status": "unknown",
+            "summary": "Insufficient data to assess.",
+            "suspected_problems": [],
+            "red_flags": [],
+        }
+
     monkeypatch.setattr("app.main.review_report", _fake_review)
     monkeypatch.setattr("app.main.generate_next_step", _fake_respond)
+    monkeypatch.setattr("app.main.evaluate_patient", _fake_eval)
 
     r = client.post(
         "/api/v1/reports/analyze",
@@ -39,4 +48,5 @@ def test_analyze_endpoint_mocked(monkeypatch):
     body = r.json()
     assert body["review"]["completeness_score"] == 80
     assert "next_step_message" in body["response"]
+    assert body["patient_evaluation"]["status"] == "unknown"
 

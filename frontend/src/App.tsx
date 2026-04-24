@@ -1,46 +1,136 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { analyzeReport } from './api'
-import type { AnalyzeResult } from './types'
+import type { AnalyzeResultV2 } from './types'
+import type { HistoryItem } from './history'
+import { loadHistory, saveHistory } from './history'
+import { defaultIndicatorsState, sections, type IndicatorsState } from './indicators/schema'
+import { indicatorsToReportText } from './indicators/render'
 
 function App() {
-  const [reportText, setReportText] = useState('')
   const [sessionId] = useState(() => crypto.randomUUID())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<AnalyzeResult | null>(null)
+  const [result, setResult] = useState<AnalyzeResultV2 | null>(null)
+  const [sourceLabel] = useState<string>('Form entry')
+  const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory())
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null)
+  const [indicators, setIndicators] = useState<IndicatorsState>(() => defaultIndicatorsState())
 
   const completeness = useMemo(() => result?.review.completeness_score ?? null, [result])
 
+  const canAnalyze = useMemo(() => {
+    if (busy) return false
+    const name = String(indicators.patient_name ?? '').trim()
+    const problem = String(indicators.problem_description ?? '').trim()
+    const anyVital =
+      String(indicators.spo2_percent ?? '').trim() !== '' ||
+      String(indicators.pulse_bpm ?? '').trim() !== '' ||
+      String(indicators.bp_systolic ?? '').trim() !== '' ||
+      String(indicators.breathing_frequency ?? '').trim() !== ''
+    return (name.length >= 2 && problem.length >= 10) || anyVital
+  }, [busy, indicators])
+
+  useEffect(() => {
+    saveHistory(history)
+  }, [history])
+
+  const handleClear = () => {
+    setResult(null)
+    setError(null)
+    setSelectedHistoryId(null)
+    setIndicators(defaultIndicatorsState())
+  }
+
   return (
     <>
-      <div className="container">
-        <header className="header">
-          <div>
-            <div className="badge">Offline • Ollama • LangChain • RAG • MCP</div>
-            <h1>Radio Medical Report Reviewer</h1>
-            <p className="subtitle">
-              Paste the report (or transcription) to get structured feedback plus a situation-adapted next-step response.
-            </p>
-          </div>
-          <div className="meta">
-            <div className="metaLabel">Session</div>
-            <div className="metaValue">{sessionId}</div>
-          </div>
-        </header>
+      <div className="appShell">
+        <aside className="sidebar">
+          <div className="sidebarTop">
+            <div className="brand">
+              <div className="brandDot" />
+              <div>
+                <div className="brandName">RMR Reviewer</div>
+                <div className="brandSub">Offline • Ollama</div>
+              </div>
+            </div>
 
-        <main className="grid">
+            <button className="button sidebarBtn" onClick={handleClear} disabled={busy}>
+              New report
+            </button>
+          </div>
+
+          <div className="sidebarSectionTitle">History</div>
+          {history.length === 0 ? (
+            <div className="sidebarEmpty">No saved reports yet.</div>
+          ) : (
+            <div className="historyList">
+              {history.map((h) => {
+                const score = h.result.review.completeness_score
+                const when = new Date(h.createdAt).toLocaleString()
+                const active = h.id === selectedHistoryId
+                return (
+                  <button
+                    key={h.id}
+                    className={`historyItem ${active ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedHistoryId(h.id)
+                      setResult(h.result)
+                      setError(null)
+                      if (h.indicators) setIndicators(h.indicators)
+                    }}
+                    disabled={busy}
+                  >
+                    <div className="historyTop">
+                      <div className="historyTitle">{h.sourceLabel || 'Form entry'}</div>
+                      <div className={`historyScore s-${score >= 85 ? 'g' : score >= 60 ? 'y' : 'r'}`}>{score}</div>
+                    </div>
+                    <div className="historyMeta">{when}</div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {history.length > 0 && (
+            <div className="sidebarFooter">
+              <button
+                className="button ghost sidebarBtn"
+                onClick={() => {
+                  setHistory([])
+                  setSelectedHistoryId(null)
+                }}
+                disabled={busy}
+              >
+                Clear history
+              </button>
+            </div>
+          )}
+        </aside>
+
+        <div className="container">
+          <header className="header">
+            <div>
+              <div className="badge">Offline • Ollama • LangChain • RAG • MCP</div>
+              <h1>Radio Medical Report Reviewer</h1>
+              <p className="subtitle">
+                Fill in the form below and click Analyze. Get structured feedback plus a situation-adapted next-step response.
+              </p>
+            </div>
+            <div className="meta">
+              <div className="metaLabel">Session</div>
+              <div className="metaValue">{sessionId}</div>
+            </div>
+          </header>
+
+          <main className="grid">
           <section className="card">
             <div className="cardHeader">
               <h2>Report</h2>
               <div className="actions">
                 <button
                   className="button ghost"
-                  onClick={() => {
-                    setReportText('')
-                    setResult(null)
-                    setError(null)
-                  }}
+                  onClick={handleClear}
                   disabled={busy}
                 >
                   Clear
@@ -51,27 +141,116 @@ function App() {
                     setBusy(true)
                     setError(null)
                     try {
-                      const res = await analyzeReport({ session_id: sessionId, report_text: reportText, locale: 'en-UK' })
+                      const finalText = indicatorsToReportText(sections, indicators)
+                      const res = await analyzeReport({ session_id: sessionId, report_text: finalText, locale: 'en-UK' })
                       setResult(res)
+                      const item: HistoryItem = {
+                        id: crypto.randomUUID(),
+                        createdAt: Date.now(),
+                        sourceLabel: sourceLabel === 'No file selected' ? 'Form entry' : sourceLabel,
+                        reportText: finalText,
+                        result: res,
+                        mode: 'form',
+                        indicators,
+                      }
+                      setHistory((prev) => [item, ...prev].slice(0, 50))
+                      setSelectedHistoryId(item.id)
                     } catch (e) {
                       setError(e instanceof Error ? e.message : 'Unknown error')
                     } finally {
                       setBusy(false)
                     }
                   }}
-                  disabled={busy || reportText.trim().length < 20}
+                  disabled={!canAnalyze}
                 >
                   {busy ? 'Analyzing…' : 'Analyze'}
                 </button>
               </div>
             </div>
 
-            <textarea
-              className="textarea"
-              placeholder="Paste the Radio Medical Record text here…"
-              value={reportText}
-              onChange={(e) => setReportText(e.target.value)}
-            />
+            <div className="formGrid">
+                {sections.map((sec) => (
+                  <div key={sec.id} className="formSection">
+                    <div className="formSectionHeader">
+                      <div className="formSectionTitle">{sec.title}</div>
+                      {sec.description && <div className="formSectionDesc">{sec.description}</div>}
+                    </div>
+                    <div className="fields">
+                      {sec.fields.map((f) => {
+                        const v = indicators[f.key]
+                        const id = `f_${sec.id}_${f.key}`
+                        if (f.type === 'textarea') {
+                          return (
+                            <label key={f.key} className="field">
+                              <span className="fieldLabel">{f.label}</span>
+                              <textarea
+                                id={id}
+                                className="fieldInput textareaSmall"
+                                placeholder={f.placeholder}
+                                value={typeof v === 'string' ? v : String(v ?? '')}
+                                onChange={(e) => setIndicators((p) => ({ ...p, [f.key]: e.target.value }))}
+                              />
+                            </label>
+                          )
+                        }
+                        if (f.type === 'checkbox') {
+                          return (
+                            <label key={f.key} className="field checkRow">
+                              <input
+                                id={id}
+                                type="checkbox"
+                                checked={Boolean(v)}
+                                onChange={(e) => setIndicators((p) => ({ ...p, [f.key]: e.target.checked }))}
+                              />
+                              <span className="fieldLabel">{f.label}</span>
+                            </label>
+                          )
+                        }
+                        if (f.type === 'select') {
+                          return (
+                            <label key={f.key} className="field">
+                              <span className="fieldLabel">{f.label}</span>
+                              <select
+                                id={id}
+                                className="fieldInput"
+                                value={typeof v === 'string' ? v : String(v ?? '')}
+                                onChange={(e) => setIndicators((p) => ({ ...p, [f.key]: e.target.value }))}
+                              >
+                                {(f.options ?? []).map((o) => (
+                                  <option key={o.value} value={o.value}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )
+                        }
+                        return (
+                          <label key={f.key} className="field">
+                            <span className="fieldLabel">
+                              {f.label}
+                              {f.unit ? <span className="unit">{f.unit}</span> : null}
+                            </span>
+                            <input
+                              id={id}
+                              className="fieldInput"
+                              type={f.type === 'number' ? 'number' : 'text'}
+                              placeholder={f.placeholder}
+                              value={typeof v === 'string' ? v : String(v ?? '')}
+                              onChange={(e) =>
+                                setIndicators((p) => ({
+                                  ...p,
+                                  [f.key]: f.type === 'number' ? e.target.value : e.target.value,
+                                }))
+                              }
+                            />
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+            </div>
 
             {error && <div className="error">Error: {error}</div>}
           </section>
@@ -150,10 +329,43 @@ function App() {
                     </>
                   )}
                 </div>
+
+                {result.patient_evaluation && (
+                  <div className="panel">
+                    <div className="panelTitle">Patient evaluation</div>
+                    <div className="pillRow">
+                      <div className={`statusPill st-${result.patient_evaluation.status}`}>
+                        {result.patient_evaluation.status.toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="message">{result.patient_evaluation.summary}</div>
+                    {result.patient_evaluation.suspected_problems.length > 0 && (
+                      <>
+                        <div className="subTitle">Suspected problems</div>
+                        <ul className="bullets">
+                          {result.patient_evaluation.suspected_problems.map((p, idx) => (
+                            <li key={idx}>{p}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {result.patient_evaluation.red_flags.length > 0 && (
+                      <>
+                        <div className="subTitle">Red flags</div>
+                        <ul className="bullets">
+                          {result.patient_evaluation.red_flags.map((p, idx) => (
+                            <li key={idx}>{p}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </section>
-        </main>
+          </main>
+        </div>
       </div>
     </>
   )

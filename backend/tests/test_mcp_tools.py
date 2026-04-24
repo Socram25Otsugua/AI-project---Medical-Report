@@ -1,4 +1,4 @@
-from mcp.medical_mcp_server import checklist_missing_sections, extract_vitals, triage_priority
+from rmrr_mcp.medical_mcp_server import checklist_missing_sections, extract_vitals, triage_priority
 
 
 def test_checklist_missing_sections_basic():

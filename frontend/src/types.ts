@@ -29,3 +29,14 @@ export type AnalyzeRequest = {
   locale: 'en-UK' | 'pt-PT'
 }
 
+export type PatientEvaluation = {
+  status: 'ok' | 'concerning' | 'critical' | 'unknown'
+  summary: string
+  suspected_problems: string[]
+  red_flags: string[]
+}
+
+export type AnalyzeResultV2 = AnalyzeResult & {
+  patient_evaluation?: PatientEvaluation
+}
+

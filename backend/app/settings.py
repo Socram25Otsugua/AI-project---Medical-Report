@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     rag_persist_dir: str = ".chroma"
     rag_collection: str = "medical_training_kb"
 
-    mcp_server_script: str = "mcp/medical_mcp_server.py"
+    mcp_server_script: str = "rmrr_mcp/medical_mcp_server.py"
 
 
 settings = Settings()

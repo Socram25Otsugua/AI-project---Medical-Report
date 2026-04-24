@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.rag import load_or_build_vectorstore
 from app.schemas import AnalyzeResult, ReportInput, ResponseResult, ReviewResult
 from app.settings import settings
-from app.llm_orchestrator import generate_next_step, review_report
+from app.llm_orchestrator import evaluate_patient, generate_next_step, review_report
 
 
 app = FastAPI(title=settings.app_name)
@@ -45,5 +45,6 @@ def analyze_endpoint(payload: ReportInput):
     rag = load_or_build_vectorstore()
     review = review_report(rag=rag, session_id=payload.session_id, report_text=payload.report_text)
     response = generate_next_step(rag=rag, session_id=payload.session_id, report_text=payload.report_text, review_json=review)
-    return {"review": review, "response": response}
+    patient_evaluation = evaluate_patient(rag=rag, session_id=payload.session_id, report_text=payload.report_text, review_json=review)
+    return {"review": review, "response": response, "patient_evaluation": patient_evaluation}
 
