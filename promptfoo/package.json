@@ -1,0 +1,13 @@
+{
+  "name": "promptfoo-tests",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test:prompts": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_WAL_MODE=true PROMPTFOO_DISABLE_TELEMETRY=true sh -c 'promptfoo eval -c promptfooconfig.review.yaml && promptfoo eval -c promptfooconfig.response.yaml'"
+  },
+  "devDependencies": {
+    "promptfoo": "^0.116.0"
+  }
+}
+

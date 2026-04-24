@@ -1,0 +1,76 @@
+description: Radio Medical Record prompt tests (Ollama)
+
+providers:
+  - id: ollama:chat:llama3.1
+    config:
+      temperature: 0.2
+      passthrough:
+        format: "json"
+
+prompts:
+  - prompts/review.txt
+  - prompts/response.txt
+
+tests:
+  - description: review prompt returns JSON with completeness score
+    prompt: prompts/review.txt
+    vars:
+      report_text: file://fixtures/report_minimal.txt
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: |
+          const match = (output || '').match(/\{[\s\S]*\}/);
+          if (!match) return false;
+          const out = JSON.parse(match[0]);
+          return (
+            out &&
+            typeof out.completeness_score === 'number' &&
+            Array.isArray(out.deficiencies) &&
+            Array.isArray(out.safety_flags)
+          );
+
+  - description: review prompt penalizes missing vitals
+    prompt: prompts/review.txt
+    vars:
+      report_text: file://fixtures/report_missing_vitals.txt
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: |
+          const match = (output || '').match(/\{[\s\S]*\}/);
+          if (!match) return false;
+          const out = JSON.parse(match[0]);
+          return typeof out.completeness_score === 'number' && out.completeness_score <= 70;
+
+  - description: response prompt returns JSON with next_step_message
+    prompt: prompts/response.txt
+    vars:
+      report_text: file://fixtures/report_minimal.txt
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: |
+          const match = (output || '').match(/\{[\s\S]*\}/);
+          if (!match) return false;
+          const out = JSON.parse(match[0]);
+          return (
+            out &&
+            typeof out.next_step_message === 'string' &&
+            Array.isArray(out.rationale_bullets) &&
+            Array.isArray(out.questions_for_participants)
+          );
+
+  - description: response prompt asks at least one question when report is sparse
+    prompt: prompts/response.txt
+    vars:
+      report_text: file://fixtures/report_missing_vitals.txt
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: |
+          const match = (output || '').match(/\{[\s\S]*\}/);
+          if (!match) return false;
+          const out = JSON.parse(match[0]);
+          return Array.isArray(out.questions_for_participants) && out.questions_for_participants.length >= 1;
+
