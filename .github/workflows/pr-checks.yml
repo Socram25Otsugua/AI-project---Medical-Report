@@ -1,0 +1,70 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  backend-tests:
+    name: Backend unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        run: pytest -q
+
+  promptfoo-tests:
+    name: Promptfoo evals
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: promptfoo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: promptfoo/package-lock.json
+
+      - name: Install promptfoo dependencies
+        run: npm ci
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama and pull model
+        run: |
+          nohup ollama serve > /tmp/ollama.log 2>&1 &
+          for i in {1..20}; do
+            if ollama list >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          ollama pull llama3.1
+
+      - name: Run promptfoo tests
+        env:
+          PROMPTFOO_DISABLE_TELEMETRY: "true"
+        run: npm run test:prompts
