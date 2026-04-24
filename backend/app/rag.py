@@ -31,7 +31,7 @@ def load_or_build_vectorstore() -> RagDeps:
         persist_directory=str(persist_dir),
     )
 
-    # Idempotente: se ainda não existir nada, indexa docs do KB local.
+    # Idempotent: if empty, index local knowledge-base docs.
     if vs._collection.count() == 0:
         docs: list[Document] = []
         for p in sorted(_kb_dir().glob("**/*")):

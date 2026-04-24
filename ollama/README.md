@@ -1,14 +1,14 @@
-# Modelo custom (opcional)
+# Custom model (optional)
 
-Se quiseres ter um modelo “afinadinho” para o domínio do projeto, podes criar um modelo Ollama a partir do `Modelfile`.
+If you want a model tuned for this project domain, you can create an Ollama model from the `Modelfile`.
 
-## Criar
+## Create
 
 ```bash
 ollama create radio-medical-ai -f Modelfile
 ```
 
-## Usar no backend
+## Use in the backend
 
 ```bash
 export OLLAMA_MODEL=radio-medical-ai

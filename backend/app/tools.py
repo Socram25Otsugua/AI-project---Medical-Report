@@ -10,26 +10,26 @@ from app.rag import RagDeps, rag_search
 
 @tool
 def mcp_checklist_missing_sections(report_text: str) -> Dict[str, Any]:
-    """MCP: identifica secções possivelmente em falta no relatório."""
+    """MCP: identify sections that may be missing in the report."""
     return call_mcp_tool_sync("checklist_missing_sections", {"report_text": report_text})
 
 
 @tool
 def mcp_extract_vitals(report_text: str) -> Dict[str, Any]:
-    """MCP: extrai vitais aproximados (regex)."""
+    """MCP: extract approximate vital signs (regex)."""
     return call_mcp_tool_sync("extract_vitals", {"report_text": report_text})
 
 
 @tool
 def mcp_triage_priority(vitals: Dict[str, Any]) -> Dict[str, Any]:
-    """MCP: classifica prioridade a partir de vitais."""
+    """MCP: classify priority from vital signs."""
     return call_mcp_tool_sync("triage_priority", {"vitals": vitals})
 
 
 def make_rag_lookup_tool(rag: RagDeps):
     @tool
     def rag_lookup(query: str) -> Dict[str, Any]:
-        """RAG: pesquisa na base de conhecimento local e devolve excertos com source."""
+        """RAG: search the local knowledge base and return source excerpts."""
         docs = rag_search(rag.vectorstore, query=query, k=4)
         return {
             "results": [

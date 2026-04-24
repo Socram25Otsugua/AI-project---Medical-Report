@@ -1,52 +1,52 @@
-# Radio Medical Record (UK) — campos essenciais (resumo)
+# Radio Medical Record (UK) — essential fields (summary)
 
-Este documento serve como checklist offline baseada no template fornecido.
+This document serves as an offline checklist based on the provided template.
 
-## Identificação / contexto
+## Identification / context
 
-- Nome/título; data de nascimento/CPR; género; nacionalidade; data/hora UTC
-- Companhia; navio; email; nº satélite; call sign
-- Coordenadas; destino/ETA; porto mais próximo/ETA; medicine chest
+- Name/title; date of birth/CPR; gender; nationality; UTC date/time
+- Company; ship; email; satellite number; call sign
+- Coordinates; destination/ETA; nearest port/ETA; medicine chest
 
 ## ABCDE
 
 ### A — Airway
 
-- Via aérea livre (sim/não); se não: jaw lift / suction / guedel
-- Se apneia/gasping: início de CPR (hora)
+- Airway clear (yes/no); if no: jaw lift / suction / guedel
+- If apnea/gasping: CPR started (time)
 
 ### B — Breathing
 
-- Frequência e profundidade; descrição (rápida/lenta/superficial/profunda)
-- SpO2; oxigénio (litros/min) e método (nasal cannula / mask)
+- Frequency and depth; description (fast/slow/shallow/deep)
+- SpO2; oxygen (liters/min) and method (nasal cannula / mask)
 
 ### C — Circulation
 
-- Reperfusão capilar (segundos) e se >2: cânula venosa (sim/não)
-- Cor/temperatura/humidade da pele
-- Pulso (local e bpm); tensão arterial
+- Capillary refill (seconds) and if >2: venous cannula (yes/no)
+- Skin color/temperature/moisture
+- Pulse (site and bpm); blood pressure
 
 ### D — Disability
 
-- Nível de consciência (1–4)
-- Convulsões; paralisia; reação pupilar
+- Level of consciousness (1-4)
+- Convulsions; paralysis; pupil reaction
 
 ### E — Exposure
 
-- Top-to-toe; sinais de lesão/doença fora de ABCD
-- Hipo/hipertermia; temperatura (método)
+- Top-to-toe; signs of injury/illness outside ABCD
+- Hypo/hyperthermia; temperature (method)
 
-## Problema (3 problem description)
+## Problem (3 problem description)
 
-- O que aconteceu, onde, quando, sintomas
+- What happened, where, when, symptoms
 
-## Tratamentos / medicação
+## Treatments / medication
 
-- Ações realizadas (incluindo não listadas acima)
-- Medicação administrada antes do contacto (lista)
+- Actions performed (including those not listed above)
+- Medication administered before contact (list)
 
-## Observação (tabela)
+## Observation (table)
 
-- Condição geral 1–4; consciência 1–4; O2; FR; CRT; SpO2; FC; TA; temperatura; pupilas
-- Fluídos IV; ingestão; diurese; sticks urina; glicemia; etc.
+- General condition 1-4; consciousness 1-4; O2; RR; CRT; SpO2; HR; BP; temperature; pupils
+- IV fluids; intake; urine output; urine strips; blood glucose; etc.
 

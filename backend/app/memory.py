@@ -12,8 +12,8 @@ class ChatTurn:
 
 class InMemorySessionStore:
     """
-    Memória simples por sessão para o projeto (offline).
-    Em produção, trocar por Redis/DB.
+    Simple per-session memory store for this offline project.
+    In production, replace with Redis/DB.
     """
 
     def __init__(self) -> None:

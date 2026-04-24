@@ -10,7 +10,7 @@ from app.settings import settings
 
 
 def _server_script_path() -> str:
-    # Resolve relativo ao diretório backend/
+    # Resolve path relative to the backend/ directory.
     here = Path(__file__).resolve()
     backend_root = here.parents[1]
     return str((backend_root / settings.mcp_server_script).resolve())
@@ -20,7 +20,7 @@ async def call_mcp_tool(tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     client = Client(_server_script_path())
     async with client:
         result = await client.call_tool(tool_name, args)
-        # fastmcp retorna objeto com .data (dict serializável)
+        # fastmcp returns an object with .data (serializable dict)
         return dict(result.data)
 
 

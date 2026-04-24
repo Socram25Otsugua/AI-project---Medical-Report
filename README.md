@@ -1,25 +1,25 @@
 # Offline AI Radio Medical Report Reviewer
 
-Aplicação offline para **avaliar relatórios clínicos (Radio Medical Record)**, identificar omissões/deficiências e gerar **respostas situacionais** (próximo passo de tratamento) como alternativa/suplemento a respostas pré-fabricadas.
+Offline application to **evaluate clinical reports (Radio Medical Record)**, identify omissions/gaps, and generate **situational responses** (next treatment step) as an alternative/supplement to prebuilt responses.
 
-## Arquitetura (requisitos do projeto)
+## Architecture (project requirements)
 
 - **Frontend**: React (Vite + TypeScript)
 - **Backend**: Python **FastAPI** (REST)
-- **LLM**: **Ollama** (modelo standard; opcional: custom Modelfile)
-- **Orquestração**: **LangChain** (prompts, chains, tools, memória)
-- **RAG**: base de conhecimento local (vector store)
-- **MCP**: servidor local de ferramentas/contexto (offline) consumido pelo LangChain
+- **LLM**: **Ollama** (standard model; optional custom Modelfile)
+- **Orchestration**: **LangChain** (prompts, chains, tools, memory)
+- **RAG**: local knowledge base (vector store)
+- **MCP**: local tools/context server (offline) consumed by LangChain
 - **Prompt testing**: Promptfoo
-- **Testes**: unit tests para componentes core (backend e frontend)
+- **Tests**: unit tests for core components (backend and frontend)
 
-## Como correr localmente
+## How to run locally
 
-### 1) Pré‑requisitos
+### 1) Prerequisites
 
 - Python 3.11+
 - Node 18+
-- [Ollama](https://ollama.com/) instalado e a correr
+- [Ollama](https://ollama.com/) installed and running
 
 ### 2) Backend
 
@@ -39,25 +39,25 @@ npm install
 npm run dev
 ```
 
-Abra a UI e submeta um relatório para obter **feedback estruturado** + **resposta recomendada**.
+Open the UI and submit a report to get **structured feedback** + a **recommended response**.
 
-## Modelos Ollama
+## Ollama Models
 
-Por defeito, o backend usa `llama3.1` (configurável por `OLLAMA_MODEL`). Se quiseres um modelo custom, coloca o `Modelfile` em `ollama/Modelfile` e documenta no README do modelo.
+By default, the backend uses `llama3.1` (configurable via `OLLAMA_MODEL`). If you want a custom model, place the `Modelfile` in `ollama/Modelfile` and document it in the model README.
 
-## Prompt tests (Promptfoo)
+## Prompt Tests (Promptfoo)
 
-Os testes de prompts vivem em `promptfoo/` e usam o provider `ollama:chat`.
+Prompt tests live in `promptfoo/` and use the `ollama:chat` provider.
 
 ```bash
 cd promptfoo
-# Em ambientes com rede restrita, evita download do Playwright:
+# In restricted-network environments, skip Playwright download:
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install
 export OLLAMA_BASE_URL="http://127.0.0.1:11434"
 npm run test:prompts
 ```
 
-## Testes unitários
+## Unit Tests
 
 ### Frontend
 
