@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { analyzeReport } from './api'
 import type { AnalyzeResultV2 } from './types'
@@ -7,17 +7,47 @@ import { loadHistory, saveHistory } from './history'
 import { defaultIndicatorsState, sections, type IndicatorsState } from './indicators/schema'
 import { indicatorsToReportText } from './indicators/render'
 
+function scoreTier(score: number): 'g' | 'y' | 'r' {
+  if (score >= 85) return 'g'
+  if (score >= 60) return 'y'
+  return 'r'
+}
+
+function patientNameFromIndicators(indicators?: IndicatorsState): string | null {
+  const name = String(indicators?.patient_name ?? '').trim()
+  return name.length > 0 ? name : null
+}
+
+function historyTitle(item: HistoryItem): string {
+  const fallback = item.sourceLabel && item.sourceLabel !== 'Form entry' ? item.sourceLabel : 'Unnamed patient'
+  return patientNameFromIndicators(item.indicators) ?? fallback
+}
+
 function App() {
   const [sessionId] = useState(() => crypto.randomUUID())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnalyzeResultV2 | null>(null)
-  const [sourceLabel] = useState<string>('Form entry')
   const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory())
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null)
+  const [viewingSavedReport, setViewingSavedReport] = useState(false)
   const [indicators, setIndicators] = useState<IndicatorsState>(() => defaultIndicatorsState())
+  const resultsRef = useRef<HTMLElement | null>(null)
+  const reportSectionRef = useRef<HTMLElement | null>(null)
 
   const completeness = useMemo(() => result?.review.completeness_score ?? null, [result])
+  const vitalsScore = useMemo(() => {
+    if (!result) return null
+    const v = result.review.vitals_score
+    if (typeof v === 'number' && !Number.isNaN(v)) return v
+    return 0
+  }, [result])
+  const vitalsFeedback = useMemo(() => {
+    if (!result) return []
+    const feedback = result.review.vitals_feedback ?? []
+    if (feedback.length > 0) return feedback
+    return ['No detailed vitals feedback is available for this saved report. Re-analyze after adding vitals to refresh it.']
+  }, [result])
 
   const canAnalyze = useMemo(() => {
     if (busy) return false
@@ -35,11 +65,25 @@ function App() {
     saveHistory(history)
   }, [history])
 
+  useEffect(() => {
+    if (viewingSavedReport && result && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [viewingSavedReport, result, selectedHistoryId])
+
   const handleClear = () => {
     setResult(null)
     setError(null)
     setSelectedHistoryId(null)
+    setViewingSavedReport(false)
     setIndicators(defaultIndicatorsState())
+  }
+
+  const openEditForm = () => {
+    setViewingSavedReport(false)
+    window.requestAnimationFrame(() => {
+      reportSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   }
 
   return (
@@ -77,13 +121,14 @@ function App() {
                       setSelectedHistoryId(h.id)
                       setResult(h.result)
                       setError(null)
+                      setViewingSavedReport(true)
                       if (h.indicators) setIndicators(h.indicators)
                     }}
                     disabled={busy}
                   >
                     <div className="historyTop">
-                      <div className="historyTitle">{h.sourceLabel || 'Form entry'}</div>
-                      <div className={`historyScore s-${score >= 85 ? 'g' : score >= 60 ? 'y' : 'r'}`}>{score}</div>
+                      <div className="historyTitle">{historyTitle(h)}</div>
+                      <div className={`historyScore s-${scoreTier(score)}`}>{score}</div>
                     </div>
                     <div className="historyMeta">{when}</div>
                   </button>
@@ -99,6 +144,8 @@ function App() {
                 onClick={() => {
                   setHistory([])
                   setSelectedHistoryId(null)
+                  setResult(null)
+                  setViewingSavedReport(false)
                 }}
                 disabled={busy}
               >
@@ -124,48 +171,10 @@ function App() {
           </header>
 
           <main className="grid">
-          <section className="card">
+          {!viewingSavedReport && (
+          <section ref={reportSectionRef} className="card">
             <div className="cardHeader">
               <h2>Report</h2>
-              <div className="actions">
-                <button
-                  className="button ghost"
-                  onClick={handleClear}
-                  disabled={busy}
-                >
-                  Clear
-                </button>
-                <button
-                  className="button"
-                  onClick={async () => {
-                    setBusy(true)
-                    setError(null)
-                    try {
-                      const finalText = indicatorsToReportText(sections, indicators)
-                      const res = await analyzeReport({ session_id: sessionId, report_text: finalText, locale: 'en-UK' })
-                      setResult(res)
-                      const item: HistoryItem = {
-                        id: crypto.randomUUID(),
-                        createdAt: Date.now(),
-                        sourceLabel: sourceLabel === 'No file selected' ? 'Form entry' : sourceLabel,
-                        reportText: finalText,
-                        result: res,
-                        mode: 'form',
-                        indicators,
-                      }
-                      setHistory((prev) => [item, ...prev].slice(0, 50))
-                      setSelectedHistoryId(item.id)
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : 'Unknown error')
-                    } finally {
-                      setBusy(false)
-                    }
-                  }}
-                  disabled={!canAnalyze}
-                >
-                  {busy ? 'Analyzing…' : 'Analyze'}
-                </button>
-              </div>
             </div>
 
             <div className="formGrid">
@@ -252,18 +261,69 @@ function App() {
                 ))}
             </div>
 
+            <div className="cardFooter">
+              <button className="button ghost" onClick={handleClear} disabled={busy}>
+                Clear
+              </button>
+              <button
+                className="button"
+                onClick={async () => {
+                  setBusy(true)
+                  setError(null)
+                  try {
+                    const finalText = indicatorsToReportText(sections, indicators)
+                    const res = await analyzeReport({ session_id: sessionId, report_text: finalText, locale: 'en-UK' })
+                    setResult(res)
+                    setViewingSavedReport(false)
+                    const item: HistoryItem = {
+                      id: crypto.randomUUID(),
+                      createdAt: Date.now(),
+                      sourceLabel: patientNameFromIndicators(indicators) ?? 'Unnamed patient',
+                      reportText: finalText,
+                      result: res,
+                      mode: 'form',
+                      indicators,
+                    }
+                    setHistory((prev) => [item, ...prev].slice(0, 50))
+                    setSelectedHistoryId(item.id)
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : 'Unknown error')
+                  } finally {
+                    setBusy(false)
+                  }
+                }}
+                disabled={!canAnalyze}
+              >
+                {busy ? 'Analyzing…' : 'Analyze'}
+              </button>
+            </div>
+
             {error && <div className="error">Error: {error}</div>}
           </section>
+          )}
 
-          <section className="card">
+          <section ref={resultsRef} id="results-section" className="card">
             <div className="cardHeader">
               <h2>Results</h2>
-              {completeness !== null && (
-                <div className="score">
-                  <div className="scoreLabel">Completeness</div>
-                  <div className="scoreValue">{completeness}/100</div>
-                </div>
-              )}
+              <div className="cardHeaderAside">
+                {viewingSavedReport && <span className="savedHint">Saved report</span>}
+                {result && (
+                  <div className="scoresRow">
+                    {completeness !== null && (
+                      <div className={`score score-tier-${scoreTier(completeness)}`}>
+                        <div className="scoreLabel">Completeness</div>
+                        <div className="scoreValue">{completeness}/100</div>
+                      </div>
+                    )}
+                    {vitalsScore !== null && (
+                      <div className={`score score-tier-${scoreTier(vitalsScore)}`}>
+                        <div className="scoreLabel">Vitals</div>
+                        <div className="scoreValue">{vitalsScore}/100</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {!result ? (
@@ -303,6 +363,15 @@ function App() {
                       ))}
                     </ul>
                   )}
+                </div>
+
+                <div className="panel">
+                  <div className="panelTitle">Vitals score feedback</div>
+                  <ul className="bullets">
+                    {vitalsFeedback.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
                 </div>
 
                 <div className="panel">
@@ -359,6 +428,13 @@ function App() {
                         </ul>
                       </>
                     )}
+                  </div>
+                )}
+                {viewingSavedReport && (
+                  <div className="savedReportFooter">
+                    <button type="button" className="button" onClick={openEditForm} disabled={busy}>
+                      Edit form
+                    </button>
                   </div>
                 )}
               </div>

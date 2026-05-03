@@ -29,6 +29,7 @@ def test_analyze_result_parses_nested_payload():
             "deficiencies": [],
             "safety_flags": [],
             "completeness_score": 75,
+            "vitals_score": 0,
         },
         response={
             "next_step_message": "Continue ABCDE.",
@@ -43,6 +44,7 @@ def test_analyze_result_parses_nested_payload():
         },
     )
     assert result.review.completeness_score == 75
+    assert result.review.vitals_score == 0
     assert result.response.next_step_message.startswith("Continue")
     assert result.patient_evaluation is not None
     assert result.patient_evaluation.status == "unknown"

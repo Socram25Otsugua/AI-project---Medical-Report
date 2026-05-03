@@ -1,7 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from app.services import rag
+import tools.rag as rag
 
 
 class _FakeCollection:

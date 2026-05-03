@@ -16,7 +16,7 @@ class RagDeps:
 
 
 def _kb_dir() -> Path:
-    return Path(__file__).resolve().parents[2] / "knowledge_base"
+    return Path(__file__).resolve().parents[1] / "knowledge_base"
 
 
 def load_or_build_vectorstore() -> RagDeps:

@@ -2,7 +2,7 @@ import json
 from types import SimpleNamespace
 
 from app.services import llm_orchestrator
-from app.memory import InMemorySessionStore
+from tools.memory import InMemorySessionStore
 
 
 class _FakeChain:
@@ -53,24 +53,19 @@ def test_review_report_uses_tools_and_updates_memory(monkeypatch):
     )
     monkeypatch.setattr(
         llm_orchestrator,
-        "mcp_checklist_missing_sections",
-        SimpleNamespace(invoke=lambda args: {"missing": ["history"]}),
-    )
-    monkeypatch.setattr(
-        llm_orchestrator,
-        "mcp_extract_vitals",
-        SimpleNamespace(invoke=lambda args: {"spo2_percent": 93}),
-    )
-    monkeypatch.setattr(
-        llm_orchestrator,
-        "mcp_triage_priority",
-        SimpleNamespace(invoke=lambda args: {"priority": "urgent"}),
+        "get_report_mcp_context",
+        lambda report_text, include_checklist: {
+            "missing_sections": {"missing": ["history"]},
+            "vitals": {"spo2_percent": 93},
+            "triage": {"priority": "urgent"},
+        },
     )
 
     rag = SimpleNamespace(vectorstore=object())
     out = llm_orchestrator.review_report(rag=rag, session_id="s1", report_text="report")
 
     assert out["completeness_score"] == 90
+    assert out["vitals_score"] == 20
     turns = fake_store.get("s1")
     assert len(turns) == 2
     assert turns[0].role == "user"
@@ -98,6 +93,14 @@ def test_generate_next_step_returns_chain_output(monkeypatch):
         "from_messages",
         staticmethod(lambda messages: fake_chain),
     )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "get_report_mcp_context",
+        lambda report_text, include_checklist: {
+            "vitals": {"spo2_percent": 94},
+            "triage": {"priority": "urgent"},
+        },
+    )
 
     rag = SimpleNamespace(vectorstore=object())
     out = llm_orchestrator.generate_next_step(
@@ -109,6 +112,8 @@ def test_generate_next_step_returns_chain_output(monkeypatch):
 
     assert out["next_step_message"] == "Do ABCDE."
     assert fake_store.get("s1")[0].role == "assistant"
+    payload = json.loads(fake_chain.last_payload["payload"])
+    assert payload["mcp"]["triage"]["priority"] == "urgent"
 
 
 def test_evaluate_patient_includes_mcp_vitals(monkeypatch):
@@ -133,13 +138,11 @@ def test_evaluate_patient_includes_mcp_vitals(monkeypatch):
     )
     monkeypatch.setattr(
         llm_orchestrator,
-        "mcp_extract_vitals",
-        SimpleNamespace(invoke=lambda args: {"spo2_percent": 91}),
-    )
-    monkeypatch.setattr(
-        llm_orchestrator,
-        "mcp_triage_priority",
-        SimpleNamespace(invoke=lambda args: {"priority": "critical"}),
+        "get_report_mcp_context",
+        lambda report_text, include_checklist: {
+            "vitals": {"spo2_percent": 91},
+            "triage": {"priority": "critical"},
+        },
     )
 
     rag = SimpleNamespace(vectorstore=object())

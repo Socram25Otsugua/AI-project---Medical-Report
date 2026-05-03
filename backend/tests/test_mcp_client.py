@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app import mcp_client
+import tools.mcp_client as mcp_client
 
 
 def test_server_script_path_resolves_under_backend_root():

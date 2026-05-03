@@ -251,6 +251,25 @@
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.cardHeaderAside {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.savedHint {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--code-bg) 80%, transparent);
+  color: var(--text-h);
 }
 
 .actions {
@@ -280,6 +299,17 @@
 .segBtn.active {
   color: var(--text-h);
   background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
 .formGrid {
@@ -317,7 +347,8 @@
 .fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px 14px;
+  align-items: start;
 }
 
 @media (max-width: 900px) {
@@ -331,6 +362,7 @@
   flex-direction: column;
   gap: 6px;
   text-align: left;
+  min-width: 0;
 }
 
 .fieldLabel {
@@ -348,6 +380,8 @@
 
 .fieldInput {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: color-mix(in oklab, var(--bg) 92%, #000);
@@ -377,6 +411,9 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: color-mix(in oklab, var(--bg) 92%, #000);
+  align-self: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pillRow {
@@ -521,14 +558,37 @@
   color: var(--text);
 }
 
+.scoresRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .score {
   display: flex;
   align-items: baseline;
   gap: 10px;
   padding: 8px 10px;
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, #22c55e 35%, var(--border));
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--code-bg) 75%, var(--bg));
+}
+
+.score.score-tier-g {
+  border-color: color-mix(in oklab, #22c55e 40%, var(--border));
   background: color-mix(in oklab, #22c55e 12%, var(--bg));
+}
+
+.score.score-tier-y {
+  border-color: color-mix(in oklab, #f59e0b 50%, var(--border));
+  background: color-mix(in oklab, #f59e0b 12%, var(--bg));
+}
+
+.score.score-tier-r {
+  border-color: color-mix(in oklab, #ef4444 45%, var(--border));
+  background: color-mix(in oklab, #ef4444 10%, var(--bg));
 }
 
 .scoreLabel {
@@ -539,6 +599,14 @@
 .scoreValue {
   font-size: 18px;
   font-weight: 800;
+}
+
+.savedReportFooter {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
 }
 
 .result {
