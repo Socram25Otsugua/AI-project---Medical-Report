@@ -19,6 +19,7 @@ def test_analyze_endpoint_mocked(monkeypatch):
             "deficiencies": [],
             "safety_flags": [],
             "completeness_score": 80,
+            "vitals_score": 40,
         }
 
     def _fake_respond(*args, **kwargs):
@@ -36,9 +37,9 @@ def test_analyze_endpoint_mocked(monkeypatch):
             "red_flags": [],
         }
 
-    monkeypatch.setattr("app.main.review_report", _fake_review)
-    monkeypatch.setattr("app.main.generate_next_step", _fake_respond)
-    monkeypatch.setattr("app.main.evaluate_patient", _fake_eval)
+    monkeypatch.setattr("main.review_report", _fake_review)
+    monkeypatch.setattr("main.generate_next_step", _fake_respond)
+    monkeypatch.setattr("main.evaluate_patient", _fake_eval)
 
     r = client.post(
         "/api/v1/reports/analyze",
@@ -60,9 +61,10 @@ def test_review_endpoint_mocked(monkeypatch):
             "deficiencies": [],
             "safety_flags": [],
             "completeness_score": 88,
+            "vitals_score": 60,
         }
 
-    monkeypatch.setattr("app.main.review_report", _fake_review)
+    monkeypatch.setattr("main.review_report", _fake_review)
 
     r = client.post(
         "/api/v1/reports/review",
@@ -82,6 +84,7 @@ def test_respond_endpoint_mocked(monkeypatch):
             "deficiencies": [],
             "safety_flags": [],
             "completeness_score": 81,
+            "vitals_score": 20,
         }
 
     def _fake_respond(*args, **kwargs):
@@ -91,8 +94,8 @@ def test_respond_endpoint_mocked(monkeypatch):
             "questions_for_participants": ["question"],
         }
 
-    monkeypatch.setattr("app.main.review_report", _fake_review)
-    monkeypatch.setattr("app.main.generate_next_step", _fake_respond)
+    monkeypatch.setattr("main.review_report", _fake_review)
+    monkeypatch.setattr("main.generate_next_step", _fake_respond)
 
     r = client.post(
         "/api/v1/reports/respond",

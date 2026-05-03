@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
-from app.services import tools
+import agents.tools as tools
+import agents.tools.mcp_tools as mcp_tools
 
 
 def test_mcp_tools_delegate_to_mcp_client(monkeypatch):
@@ -10,7 +11,7 @@ def test_mcp_tools_delegate_to_mcp_client(monkeypatch):
         calls.append((name, args))
         return {"ok": True, "name": name}
 
-    monkeypatch.setattr(tools, "call_mcp_tool_sync", _fake_call)
+    monkeypatch.setattr(mcp_tools, "call_mcp_tool_sync", _fake_call)
 
     out_a = tools.mcp_checklist_missing_sections.invoke({"report_text": "report"})
     out_b = tools.mcp_extract_vitals.invoke({"report_text": "report"})
@@ -34,7 +35,7 @@ def test_make_rag_lookup_tool_formats_results(monkeypatch):
         assert k == 4
         return fake_docs
 
-    monkeypatch.setattr(tools, "rag_search", _fake_rag_search)
+    monkeypatch.setattr("agents.tools.rag_tools.rag_search", _fake_rag_search)
     rag = SimpleNamespace(vectorstore="vectorstore")
     rag_lookup = tools.make_rag_lookup_tool(rag)
 

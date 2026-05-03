@@ -10,6 +10,9 @@ export type ReviewResult = {
   deficiencies: Deficiency[]
   safety_flags: string[]
   completeness_score: number
+  /** 0–100: coverage of key vitals from structured extraction (MCP). */
+  vitals_score?: number
+  vitals_feedback?: string[]
 }
 
 export type ResponseResult = {

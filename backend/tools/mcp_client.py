@@ -12,7 +12,7 @@ from app.settings import settings
 def _server_script_path() -> str:
     # Resolve path relative to the backend/ directory.
     here = Path(__file__).resolve()
-    backend_root = here.parents[2]
+    backend_root = here.parents[1]
     return str((backend_root / settings.mcp_server_script).resolve())
 
 

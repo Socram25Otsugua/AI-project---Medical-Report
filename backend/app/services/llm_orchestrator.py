@@ -8,11 +8,11 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 
+from app.mcp import get_report_mcp_context, vitals_coverage_feedback, vitals_coverage_score
 from app.models.schemas import PatientEvaluation, ResponseResult, ReviewResult
 from app.prompts import PATIENT_EVAL_SYSTEM_PROMPT, RESPONSE_SYSTEM_PROMPT, REVIEW_SYSTEM_PROMPT
-from app.services.memory import session_store
-from app.services.rag import RagDeps, rag_search
-from app.services.tools import mcp_checklist_missing_sections, mcp_extract_vitals, mcp_triage_priority
+from tools.memory import session_store
+from tools.rag import RagDeps, rag_search
 from app.settings import settings
 
 
@@ -38,9 +38,7 @@ def review_report(rag: RagDeps, session_id: str, report_text: str) -> Dict[str, 
     history = session_store.get(session_id)[-6:]
     memory_snippet = "\n".join([f"{t.role}: {t.content}" for t in history]) if history else ""
 
-    missing = mcp_checklist_missing_sections.invoke({"report_text": report_text})
-    vitals = mcp_extract_vitals.invoke({"report_text": report_text})
-    triage = mcp_triage_priority.invoke({"vitals": vitals})
+    mcp_context = get_report_mcp_context(report_text, include_checklist=True)
 
     docs = rag_search(rag.vectorstore, query="Radio Medical Record checklist ABCDE vitals history actions", k=4)
     context = _format_rag_context(docs)
@@ -49,7 +47,7 @@ def review_report(rag: RagDeps, session_id: str, report_text: str) -> Dict[str, 
         "report_text": report_text,
         "memory": memory_snippet,
         "rag_context": context,
-        "mcp": {"missing_sections": missing, "vitals": vitals, "triage": triage},
+        "mcp": mcp_context,
     }
 
     parser = JsonOutputParser(pydantic_object=ReviewResult)
@@ -61,19 +59,28 @@ def review_report(rag: RagDeps, session_id: str, report_text: str) -> Dict[str, 
     )
     chain = prompt | _chat() | parser
     data = chain.invoke({"payload": json.dumps(user_payload, ensure_ascii=False)})
+    raw: Dict[str, Any]
+    if hasattr(data, "model_dump"):
+        raw = data.model_dump()
+    else:
+        raw = dict(data)
+    raw["vitals_score"] = vitals_coverage_score(mcp_context["vitals"])
+    raw["vitals_feedback"] = vitals_coverage_feedback(mcp_context["vitals"])
     session_store.append(session_id, "user", report_text[:8000])
-    session_store.append(session_id, "assistant", json.dumps(data, ensure_ascii=False)[:8000])
-    return data
+    session_store.append(session_id, "assistant", json.dumps(raw, ensure_ascii=False)[:8000])
+    return raw
 
 
 def generate_next_step(rag: RagDeps, session_id: str, report_text: str, review_json: Dict[str, Any]) -> Dict[str, Any]:
     docs = rag_search(rag.vectorstore, query="ABCDE stabilization escalation guidance questions", k=4)
     context = _format_rag_context(docs)
+    mcp_context = get_report_mcp_context(report_text, include_checklist=False)
 
     user_payload = {
         "report_text": report_text,
         "review": review_json,
         "rag_context": context,
+        "mcp": mcp_context,
     }
 
     parser = JsonOutputParser(pydantic_object=ResponseResult)
@@ -92,15 +99,13 @@ def generate_next_step(rag: RagDeps, session_id: str, report_text: str, review_j
 def evaluate_patient(rag: RagDeps, session_id: str, report_text: str, review_json: Dict[str, Any]) -> Dict[str, Any]:
     docs = rag_search(rag.vectorstore, query="ABCDE red flags triage assessment vitals", k=4)
     context = _format_rag_context(docs)
-
-    vitals = mcp_extract_vitals.invoke({"report_text": report_text})
-    triage = mcp_triage_priority.invoke({"vitals": vitals})
+    mcp_context = get_report_mcp_context(report_text, include_checklist=False)
 
     user_payload = {
         "report_text": report_text,
         "review": review_json,
         "rag_context": context,
-        "mcp": {"vitals": vitals, "triage": triage},
+        "mcp": mcp_context,
     }
 
     parser = JsonOutputParser(pydantic_object=PatientEvaluation)

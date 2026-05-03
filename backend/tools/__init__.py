@@ -1,15 +1,14 @@
-from app.services.llm_orchestrator import evaluate_patient, generate_next_step, review_report
 from tools.memory import ChatTurn, InMemorySessionStore, session_store
+from tools.mcp_client import call_mcp_tool, call_mcp_tool_sync
 from tools.rag import RagDeps, load_or_build_vectorstore, rag_search
 
 __all__ = [
     "ChatTurn",
     "InMemorySessionStore",
     "RagDeps",
-    "evaluate_patient",
-    "generate_next_step",
+    "call_mcp_tool",
+    "call_mcp_tool_sync",
     "load_or_build_vectorstore",
     "rag_search",
-    "review_report",
     "session_store",
 ]
