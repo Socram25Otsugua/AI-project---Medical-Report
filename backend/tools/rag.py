@@ -19,6 +19,17 @@ def _kb_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "knowledge_base"
 
 
+def _rag_data_dir() -> Path:
+    return Path(__file__).resolve().parents[1] / "rag_data"
+
+
+def _doc_source_paths() -> list[Path]:
+    """
+    Source directories for local RAG documents.
+    """
+    return [p for p in (_kb_dir(), _rag_data_dir()) if p.exists()]
+
+
 def load_or_build_vectorstore() -> RagDeps:
     persist_dir = Path(settings.rag_persist_dir)
     persist_dir.mkdir(parents=True, exist_ok=True)
@@ -33,14 +44,20 @@ def load_or_build_vectorstore() -> RagDeps:
     # Idempotent: if empty, index local knowledge-base docs.
     if vs._collection.count() == 0:
         docs: list[Document] = []
-        for p in sorted(_kb_dir().glob("**/*")):
-            if not p.is_file():
-                continue
-            if p.suffix.lower() not in {".md", ".txt"}:
-                continue
-            text = p.read_text(encoding="utf-8", errors="ignore")
-            if text.strip():
-                docs.append(Document(page_content=text, metadata={"source": str(p.relative_to(_kb_dir()))}))
+        for source_dir in _doc_source_paths():
+            for p in sorted(source_dir.glob("**/*")):
+                if not p.is_file():
+                    continue
+                if p.suffix.lower() not in {".md", ".txt"}:
+                    continue
+                text = p.read_text(encoding="utf-8", errors="ignore")
+                if text.strip():
+                    docs.append(
+                        Document(
+                            page_content=text,
+                            metadata={"source": f"{source_dir.name}/{p.relative_to(source_dir)}"},
+                        )
+                    )
         if docs:
             vs.add_documents(docs)
             vs.persist()

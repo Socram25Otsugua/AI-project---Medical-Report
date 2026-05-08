@@ -60,6 +60,21 @@ def test_review_report_uses_tools_and_updates_memory(monkeypatch):
             "triage": {"priority": "urgent"},
         },
     )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "scenario_context_mcp",
+        SimpleNamespace(get_scenario=lambda _text: {"success": True, "scenario": {"detected_type": "default"}}),
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "medical_guidelines_mcp",
+        SimpleNamespace(get_context_string=lambda _text, k=3: "guidelines"),
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "session_memory_mcp",
+        SimpleNamespace(get_context_string=lambda _sid: "No previous exchanges in this session."),
+    )
 
     rag = SimpleNamespace(vectorstore=object())
     out = llm_orchestrator.review_report(rag=rag, session_id="s1", report_text="report")
@@ -100,6 +115,21 @@ def test_generate_next_step_returns_chain_output(monkeypatch):
             "vitals": {"spo2_percent": 94},
             "triage": {"priority": "urgent"},
         },
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "scenario_context_mcp",
+        SimpleNamespace(get_scenario=lambda _text: {"success": True, "scenario": {"detected_type": "default"}}),
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "medical_guidelines_mcp",
+        SimpleNamespace(get_context_string=lambda _text, k=3: "guidelines"),
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "session_memory_mcp",
+        SimpleNamespace(get_context_string=lambda _sid: "No previous exchanges in this session."),
     )
 
     rag = SimpleNamespace(vectorstore=object())
@@ -143,6 +173,21 @@ def test_evaluate_patient_includes_mcp_vitals(monkeypatch):
             "vitals": {"spo2_percent": 91},
             "triage": {"priority": "critical"},
         },
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "scenario_context_mcp",
+        SimpleNamespace(get_scenario=lambda _text: {"success": True, "scenario": {"detected_type": "default"}}),
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "medical_guidelines_mcp",
+        SimpleNamespace(get_context_string=lambda _text, k=3: "guidelines"),
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "session_memory_mcp",
+        SimpleNamespace(get_context_string=lambda _sid: "No previous exchanges in this session."),
     )
 
     rag = SimpleNamespace(vectorstore=object())

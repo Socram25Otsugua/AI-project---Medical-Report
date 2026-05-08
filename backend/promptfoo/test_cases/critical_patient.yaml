@@ -1,0 +1,7 @@
+description: "Critical patient with abnormal vitals"
+vars:
+  report_text: |
+    Problem: patient collapsed and is difficult to rouse.
+    B Breathing: shallow, RR 7, SpO2 82%.
+    C Circulation: Pulse 130, BP 80/50, skin pale and clammy.
+    D Disability: reduced consciousness.

@@ -6,7 +6,7 @@ def test_required_backend_structure_exists():
     required_paths = [
         root / "agents",
         root / "agents" / "tools",
-        root / "models",
+        root / "app" / "models",
         root / "tools",
         root / "tests",
         root / "requirements.txt",

@@ -1,0 +1,10 @@
+description: "Complete well-documented report"
+vars:
+  report_text: |
+    Patient name: Alex Morgan
+    Problem: minor forearm laceration after slip, no loss of consciousness.
+    A Airway: clear.
+    B Breathing: RR 14, SpO2 98%, no distress.
+    C Circulation: Pulse 72, BP 125/80, capillary refill 1.5 sec.
+    D Disability: alert, no focal deficits.
+    E Exposure: no additional injuries, temperature 36.6 C.

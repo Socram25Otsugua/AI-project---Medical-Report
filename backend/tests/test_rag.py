@@ -34,12 +34,16 @@ class _FakeChroma:
 def test_load_or_build_vectorstore_indexes_kb_documents(monkeypatch, tmp_path):
     kb_dir = tmp_path / "knowledge_base"
     kb_dir.mkdir()
+    rag_data_dir = tmp_path / "rag_data"
+    rag_data_dir.mkdir()
     (kb_dir / "one.md").write_text("# A", encoding="utf-8")
     (kb_dir / "two.txt").write_text("B", encoding="utf-8")
     (kb_dir / "three.bin").write_bytes(b"\x00\x01")
+    (rag_data_dir / "extra.txt").write_text("C", encoding="utf-8")
     persist_dir = tmp_path / "db"
 
     monkeypatch.setattr(rag, "_kb_dir", lambda: kb_dir)
+    monkeypatch.setattr(rag, "_rag_data_dir", lambda: rag_data_dir)
     monkeypatch.setattr(rag, "Chroma", _FakeChroma)
     monkeypatch.setattr(rag, "OllamaEmbeddings", lambda model, base_url: {"model": model, "base_url": base_url})
     monkeypatch.setattr(rag.settings, "rag_persist_dir", str(persist_dir))
@@ -49,9 +53,13 @@ def test_load_or_build_vectorstore_indexes_kb_documents(monkeypatch, tmp_path):
 
     assert isinstance(deps.vectorstore, _FakeChroma)
     assert Path(deps.vectorstore.persist_directory) == persist_dir
-    assert len(deps.vectorstore.saved_docs) == 2
+    assert len(deps.vectorstore.saved_docs) == 3
     assert deps.vectorstore.persist_called is True
-    assert {doc.metadata["source"] for doc in deps.vectorstore.saved_docs} == {"one.md", "two.txt"}
+    assert {doc.metadata["source"] for doc in deps.vectorstore.saved_docs} == {
+        "knowledge_base/one.md",
+        "knowledge_base/two.txt",
+        "rag_data/extra.txt",
+    }
 
 
 def test_rag_search_delegates_to_vectorstore():

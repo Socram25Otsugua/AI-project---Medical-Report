@@ -14,7 +14,7 @@ from agents.tools import make_rag_lookup_tool, mcp_checklist_missing_sections, m
 from app.mcp import vitals_coverage_feedback, vitals_coverage_score
 from app.prompts import PATIENT_EVAL_SYSTEM_PROMPT, RESPONSE_SYSTEM_PROMPT, REVIEW_SYSTEM_PROMPT
 from app.settings import settings
-from models.schemas import AnalyzeResult, PatientEvaluation, ResponseResult, ReviewResult
+from app.models.schemas import AnalyzeResult, PatientEvaluation, ResponseResult, ReviewResult
 from tools.memory import session_store
 from tools.rag import RagDeps, rag_search
 

@@ -1,0 +1,29 @@
+ABCDE MARITIME MEDICAL ASSESSMENT GUIDELINES
+
+A - Airway
+- Check if airway is patent and protected.
+- If compromised, apply jaw thrust/chin lift and suction as needed.
+- Consider oropharyngeal airway when indicated.
+
+B - Breathing
+- Assess breathing rate, pattern, and chest movement.
+- Record SpO2 and oxygen delivery method and flow.
+- Escalate urgently for severe respiratory distress or hypoxia.
+
+C - Circulation
+- Measure pulse, blood pressure, capillary refill, and skin signs.
+- Identify shock indicators early (hypotension, tachycardia, poor perfusion).
+- Start IV access and fluid strategy per protocol when indicated.
+
+D - Disability
+- Assess consciousness level and neurological red flags.
+- Record pupil findings and seizure activity.
+
+E - Exposure
+- Perform full-body check while preventing hypothermia.
+- Document temperature and environmental factors.
+
+RADIO MEDICAL REPORT REMINDERS
+- Include objective measurements and timestamps.
+- State what interventions were already done and patient response.
+- Explicitly call out red flags and escalation needs.

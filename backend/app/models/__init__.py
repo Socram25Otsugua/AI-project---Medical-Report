@@ -1,4 +1,4 @@
-from models.schemas import AnalyzeResult, Deficiency, PatientEvaluation, ReportInput, ResponseResult, ReviewResult
+from app.models.schemas import AnalyzeResult, Deficiency, PatientEvaluation, ReportInput, ResponseResult, ReviewResult
 
 __all__ = [
     "AnalyzeResult",

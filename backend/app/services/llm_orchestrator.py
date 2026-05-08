@@ -8,7 +8,14 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 
-from app.mcp import get_report_mcp_context, vitals_coverage_feedback, vitals_coverage_score
+from app.mcp import (
+    get_report_mcp_context,
+    medical_guidelines_mcp,
+    scenario_context_mcp,
+    session_memory_mcp,
+    vitals_coverage_feedback,
+    vitals_coverage_score,
+)
 from app.models.schemas import PatientEvaluation, ResponseResult, ReviewResult
 from app.prompts import PATIENT_EVAL_SYSTEM_PROMPT, RESPONSE_SYSTEM_PROMPT, REVIEW_SYSTEM_PROMPT
 from tools.memory import session_store
@@ -37,8 +44,13 @@ def _format_rag_context(docs: List[Any]) -> str:
 def review_report(rag: RagDeps, session_id: str, report_text: str) -> Dict[str, Any]:
     history = session_store.get(session_id)[-6:]
     memory_snippet = "\n".join([f"{t.role}: {t.content}" for t in history]) if history else ""
+    mcp_history = session_memory_mcp.get_context_string(session_id)
+    if mcp_history != "No previous exchanges in this session.":
+        memory_snippet = mcp_history
 
     mcp_context = get_report_mcp_context(report_text, include_checklist=True)
+    mcp_context["scenario_context"] = scenario_context_mcp.get_scenario(report_text)
+    mcp_context["guidelines_context"] = medical_guidelines_mcp.get_context_string(report_text, k=3)
 
     docs = rag_search(rag.vectorstore, query="Radio Medical Record checklist ABCDE vitals history actions", k=4)
     context = _format_rag_context(docs)
@@ -75,11 +87,15 @@ def generate_next_step(rag: RagDeps, session_id: str, report_text: str, review_j
     docs = rag_search(rag.vectorstore, query="ABCDE stabilization escalation guidance questions", k=4)
     context = _format_rag_context(docs)
     mcp_context = get_report_mcp_context(report_text, include_checklist=False)
+    mcp_context["scenario_context"] = scenario_context_mcp.get_scenario(report_text)
+    mcp_context["guidelines_context"] = medical_guidelines_mcp.get_context_string(report_text, k=3)
+    mcp_history = session_memory_mcp.get_context_string(session_id)
 
     user_payload = {
         "report_text": report_text,
         "review": review_json,
         "rag_context": context,
+        "memory": mcp_history,
         "mcp": mcp_context,
     }
 
@@ -100,11 +116,15 @@ def evaluate_patient(rag: RagDeps, session_id: str, report_text: str, review_jso
     docs = rag_search(rag.vectorstore, query="ABCDE red flags triage assessment vitals", k=4)
     context = _format_rag_context(docs)
     mcp_context = get_report_mcp_context(report_text, include_checklist=False)
+    mcp_context["scenario_context"] = scenario_context_mcp.get_scenario(report_text)
+    mcp_context["guidelines_context"] = medical_guidelines_mcp.get_context_string(report_text, k=3)
+    mcp_history = session_memory_mcp.get_context_string(session_id)
 
     user_payload = {
         "report_text": report_text,
         "review": review_json,
         "rag_context": context,
+        "memory": mcp_history,
         "mcp": mcp_context,
     }
 

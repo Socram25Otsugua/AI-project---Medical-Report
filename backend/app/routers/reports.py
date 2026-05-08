@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from models.schemas import AnalyzeResult, ReportInput, ResponseResult, ReviewResult
+from app.models.schemas import AnalyzeResult, ReportInput, ResponseResult, ReviewResult
 from tools.rag import load_or_build_vectorstore
 
 

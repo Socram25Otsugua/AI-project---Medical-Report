@@ -1,0 +1,26 @@
+RADIO MEDICAL COMMUNICATION PROCEDURES
+
+Before contact:
+- Prepare patient identity, scenario summary, and timeline.
+- Gather latest ABCDE findings and key vitals.
+- List treatments already performed and available onboard resources.
+
+During contact:
+- Present concise structured report (ABCDE + interventions + trend).
+- Communicate red flags first.
+- Clarify uncertain details rather than guessing.
+
+After guidance:
+- Read back critical instructions to confirm understanding.
+- Record medication doses, timing, and reassessment plan.
+- Define next report interval and escalation triggers.
+
+Documentation essentials:
+- UTC date/time of each major event.
+- Exact values for vitals and changes over time.
+- Objective response to interventions (improved/worse/unchanged).
+
+Escalation cues:
+- Deteriorating airway or breathing.
+- Persistent hypoxia, hypotension, or altered consciousness.
+- Suspected internal bleeding, stroke signs, or chest pain with instability.

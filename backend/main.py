@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.services.llm_orchestrator import evaluate_patient, generate_next_step, review_report
 from app.settings import settings
-from models.schemas import AnalyzeResult, ReportInput, ResponseResult, ReviewResult
+from app.models.schemas import AnalyzeResult, ReportInput, ResponseResult, ReviewResult
 from tools.rag import RagDeps, load_or_build_vectorstore
 
 app = FastAPI(title=settings.app_name)
