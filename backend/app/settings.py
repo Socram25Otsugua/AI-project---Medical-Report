@@ -16,6 +16,10 @@ class Settings(BaseSettings):
 
     mcp_server_script: str = "rmrr_mcp/medical_mcp_server.py"
 
+    mongo_uri: str = "mongodb://localhost:27017"
+    mongo_db: str = "rmrr"
+    mongo_collection_reports: str = "reports"
+
 
 settings = Settings()
 

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { analyzeReport } from './api'
+import { analyzeReport, clearHistory, createHistory, deleteHistory, listHistory } from './api'
 import type { AnalyzeResultV2 } from './types'
 import type { HistoryItem } from './history'
-import { loadHistory, saveHistory } from './history'
 import { defaultIndicatorsState, sections, type IndicatorsState } from './indicators/schema'
 import { indicatorsToReportText } from './indicators/render'
 
@@ -28,7 +27,7 @@ function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnalyzeResultV2 | null>(null)
-  const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory())
+  const [history, setHistory] = useState<HistoryItem[]>([])
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null)
   const [viewingSavedReport, setViewingSavedReport] = useState(false)
   const [indicators, setIndicators] = useState<IndicatorsState>(() => defaultIndicatorsState())
@@ -62,8 +61,15 @@ function App() {
   }, [busy, indicators])
 
   useEffect(() => {
-    saveHistory(history)
-  }, [history])
+    ;(async () => {
+      try {
+        const items = await listHistory(50)
+        setHistory(items)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load history')
+      }
+    })()
+  }, [])
 
   useEffect(() => {
     if (viewingSavedReport && result && resultsRef.current) {
@@ -128,7 +134,33 @@ function App() {
                   >
                     <div className="historyTop">
                       <div className="historyTitle">{historyTitle(h)}</div>
-                      <div className={`historyScore s-${scoreTier(score)}`}>{score}</div>
+                      <div className="historyRight">
+                        <div className={`historyScore s-${scoreTier(score)}`}>{score}</div>
+                        <button
+                          type="button"
+                          className="iconBtn"
+                          title="Delete report"
+                          aria-label="Delete report"
+                          onClick={async (e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            try {
+                              await deleteHistory(h.id)
+                              setHistory((prev) => prev.filter((x) => x.id !== h.id))
+                              if (selectedHistoryId === h.id) {
+                                setSelectedHistoryId(null)
+                                setResult(null)
+                                setViewingSavedReport(false)
+                              }
+                            } catch (err) {
+                              setError(err instanceof Error ? err.message : 'Failed to delete report')
+                            }
+                          }}
+                          disabled={busy}
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                     <div className="historyMeta">{when}</div>
                   </button>
@@ -142,10 +174,17 @@ function App() {
               <button
                 className="button ghost sidebarBtn"
                 onClick={() => {
-                  setHistory([])
-                  setSelectedHistoryId(null)
-                  setResult(null)
-                  setViewingSavedReport(false)
+                  ;(async () => {
+                    try {
+                      await clearHistory()
+                      setHistory([])
+                      setSelectedHistoryId(null)
+                      setResult(null)
+                      setViewingSavedReport(false)
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Failed to clear history')
+                    }
+                  })()
                 }}
                 disabled={busy}
               >
@@ -275,8 +314,7 @@ function App() {
                     const res = await analyzeReport({ session_id: sessionId, report_text: finalText, locale: 'en-UK' })
                     setResult(res)
                     setViewingSavedReport(false)
-                    const item: HistoryItem = {
-                      id: crypto.randomUUID(),
+                    const itemNoId: Omit<HistoryItem, 'id'> = {
                       createdAt: Date.now(),
                       sourceLabel: patientNameFromIndicators(indicators) ?? 'Unnamed patient',
                       reportText: finalText,
@@ -284,8 +322,9 @@ function App() {
                       mode: 'form',
                       indicators,
                     }
-                    setHistory((prev) => [item, ...prev].slice(0, 50))
-                    setSelectedHistoryId(item.id)
+                    const saved = await createHistory(itemNoId)
+                    setHistory((prev) => [saved, ...prev].slice(0, 50))
+                    setSelectedHistoryId(saved.id)
                   } catch (e) {
                     setError(e instanceof Error ? e.message : 'Unknown error')
                   } finally {

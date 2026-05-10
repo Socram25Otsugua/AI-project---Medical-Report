@@ -8,6 +8,9 @@ from app.settings import settings
 from app.models.schemas import AnalyzeResult, ReportInput, ResponseResult, ReviewResult
 from tools.rag import RagDeps, load_or_build_vectorstore
 
+from app.models.history import HistoryItemIn, HistoryItemOut
+from app.services.mongo import clear_reports, create_report, delete_report, list_reports
+
 app = FastAPI(title=settings.app_name)
 
 app.add_middleware(
@@ -63,3 +66,26 @@ def analyze_with_agent_endpoint(payload: ReportInput):
 
     agent = ReportAgent(rag=_get_rag())
     return agent.analyze(session_id=payload.session_id, report_text=payload.report_text)
+
+
+@app.get(f"{settings.api_prefix}/reports/history", response_model=list[HistoryItemOut])
+def history_list_endpoint(limit: int = 50):
+    return list_reports(limit=limit)
+
+
+@app.post(f"{settings.api_prefix}/reports/history", response_model=HistoryItemOut)
+def history_create_endpoint(payload: HistoryItemIn):
+    doc = payload.model_dump()
+    return create_report(doc)
+
+
+@app.delete(f"{settings.api_prefix}/reports/history", response_model=dict)
+def history_clear_endpoint():
+    deleted = clear_reports()
+    return {"deleted": deleted}
+
+
+@app.delete(f"{settings.api_prefix}/reports/history/{{report_id}}", response_model=dict)
+def history_delete_one_endpoint(report_id: str):
+    ok = delete_report(report_id)
+    return {"deleted": ok}
