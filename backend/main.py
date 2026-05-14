@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import ValidationError
 
-from app.services.llm_orchestrator import evaluate_patient, generate_next_step, review_report
+from app.services.conversation_state import clear_state
+from app.services.llm_orchestrator import chat_doctor_turn, evaluate_patient, generate_next_step, review_report
 from app.settings import settings
-from app.models.schemas import AnalyzeResult, ReportInput, ResponseResult, ReviewResult
+from app.models.schemas import AnalyzeResult, ChatTurnInput, ChatTurnResult, ReportInput, ResponseResult, ReviewResult
 from tools.rag import RagDeps, load_or_build_vectorstore
 
 from app.models.history import HistoryItemIn, HistoryItemOut
@@ -22,6 +26,7 @@ app.add_middleware(
 )
 
 _rag_deps: RagDeps | None = None
+logger = logging.getLogger(__name__)
 
 
 def _get_rag() -> RagDeps:
@@ -62,10 +67,54 @@ def analyze_endpoint(payload: ReportInput):
 
 @app.post(f"{settings.api_prefix}/reports/analyze-agent", response_model=AnalyzeResult)
 def analyze_with_agent_endpoint(payload: ReportInput):
-    from agents.report_agent import ReportAgent
+    rag = _get_rag()
+    try:
+        from agents.report_agent import ReportAgent
 
-    agent = ReportAgent(rag=_get_rag())
-    return agent.analyze(session_id=payload.session_id, report_text=payload.report_text)
+        agent = ReportAgent(rag=rag)
+        candidate = agent.analyze(session_id=payload.session_id, report_text=payload.report_text)
+    except Exception as exc:
+        # Keep endpoint available even if optional agent stack is incompatible at runtime.
+        logger.warning("analyze-agent fallback to orchestrator flow: %s", exc)
+        review = review_report(rag=rag, session_id=payload.session_id, report_text=payload.report_text)
+        response = generate_next_step(rag=rag, session_id=payload.session_id, report_text=payload.report_text, review_json=review)
+        patient_evaluation = evaluate_patient(
+            rag=rag, session_id=payload.session_id, report_text=payload.report_text, review_json=review
+        )
+        return {"review": review, "response": response, "patient_evaluation": patient_evaluation}
+    try:
+        return AnalyzeResult.model_validate(candidate).model_dump()
+    except ValidationError as exc:
+        logger.warning("analyze-agent returned invalid schema, fallback to orchestrator flow: %s", exc)
+        review = review_report(rag=rag, session_id=payload.session_id, report_text=payload.report_text)
+        response = generate_next_step(rag=rag, session_id=payload.session_id, report_text=payload.report_text, review_json=review)
+        patient_evaluation = evaluate_patient(
+            rag=rag, session_id=payload.session_id, report_text=payload.report_text, review_json=review
+        )
+        return {"review": review, "response": response, "patient_evaluation": patient_evaluation}
+
+
+@app.post(f"{settings.api_prefix}/reports/chat-turn", response_model=ChatTurnResult)
+def chat_turn_endpoint(payload: ChatTurnInput):
+    rag = _get_rag()
+    return chat_doctor_turn(
+        rag=rag,
+        session_id=payload.session_id,
+        report_text=payload.report_text,
+        user_message=payload.user_message,
+    )
+
+
+@app.post(f"{settings.api_prefix}/reports/finalize-summary", response_model=AnalyzeResult)
+def finalize_summary_endpoint(payload: ReportInput):
+    rag = _get_rag()
+    review = review_report(rag=rag, session_id=payload.session_id, report_text=payload.report_text)
+    response = generate_next_step(rag=rag, session_id=payload.session_id, report_text=payload.report_text, review_json=review)
+    patient_evaluation = evaluate_patient(
+        rag=rag, session_id=payload.session_id, report_text=payload.report_text, review_json=review
+    )
+    clear_state(payload.session_id)
+    return {"review": review, "response": response, "patient_evaluation": patient_evaluation}
 
 
 @app.get(f"{settings.api_prefix}/reports/history", response_model=list[HistoryItemOut])

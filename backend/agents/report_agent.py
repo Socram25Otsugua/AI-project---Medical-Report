@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
@@ -15,6 +16,7 @@ from app.mcp import vitals_coverage_feedback, vitals_coverage_score
 from app.prompts import PATIENT_EVAL_SYSTEM_PROMPT, RESPONSE_SYSTEM_PROMPT, REVIEW_SYSTEM_PROMPT
 from app.settings import settings
 from app.models.schemas import AnalyzeResult, PatientEvaluation, ResponseResult, ReviewResult
+from app.services.analysis_guardrails import filter_deficiencies, filter_questions, filter_temperature_labels
 from tools.memory import session_store
 from tools.rag import RagDeps, rag_search
 
@@ -46,6 +48,20 @@ def _parse_agent_json_output(output: Any) -> Dict[str, Any]:
         except json.JSONDecodeError as exc:
             raise ValueError("Agent output is not valid JSON.") from exc
     raise ValueError("Agent output has unsupported type.")
+
+
+def _filter_redundant_questions(report_text: str, questions: list[str]) -> list[str]:
+    text = report_text.lower()
+    has_consciousness = bool(re.search(r"(level of consciousness|consciousness|avpu|gcs)", text))
+    if not has_consciousness:
+        return questions
+    filtered: list[str] = []
+    for q in questions:
+        ql = str(q).lower()
+        if re.search(r"(consciousness|avpu|alert.*voice.*pain|gcs)", ql):
+            continue
+        filtered.append(str(q))
+    return filtered
 
 
 @dataclass
@@ -109,6 +125,8 @@ class ReportAgent:
             raw = data.model_dump()
         else:
             raw = dict(data)
+        raw["deficiencies"] = filter_deficiencies(report_text, raw.get("deficiencies", []))
+        raw["safety_flags"] = filter_temperature_labels(report_text, raw.get("safety_flags", []))
         vitals = mcp_extract_vitals.invoke({"report_text": report_text})
         raw["vitals_score"] = vitals_coverage_score(vitals)
         raw["vitals_feedback"] = vitals_coverage_feedback(vitals)
@@ -122,8 +140,18 @@ class ReportAgent:
         user_payload = {"report_text": report_text, "review": review_json, "rag_context": context}
 
         data = self._invoke_agent_with_fallback(RESPONSE_SYSTEM_PROMPT, ResponseResult, user_payload)
-        session_store.append(session_id, "assistant", json.dumps(data, ensure_ascii=False)[:8000])
-        return data
+        raw: Dict[str, Any]
+        if hasattr(data, "model_dump"):
+            raw = data.model_dump()
+        else:
+            raw = dict(data)
+        raw["questions_for_participants"] = _filter_redundant_questions(
+            report_text, raw.get("questions_for_participants", [])
+        )
+        raw["questions_for_participants"] = filter_questions(report_text, raw.get("questions_for_participants", []))
+        raw["rationale_bullets"] = filter_temperature_labels(report_text, raw.get("rationale_bullets", []))
+        session_store.append(session_id, "assistant", json.dumps(raw, ensure_ascii=False)[:8000])
+        return raw
 
     def evaluate_patient(self, session_id: str, report_text: str, review_json: Dict[str, Any]) -> Dict[str, Any]:
         docs = rag_search(self.rag.vectorstore, query="ABCDE red flags triage assessment vitals", k=4)
@@ -131,8 +159,15 @@ class ReportAgent:
         user_payload = {"report_text": report_text, "review": review_json, "rag_context": context}
 
         data = self._invoke_agent_with_fallback(PATIENT_EVAL_SYSTEM_PROMPT, PatientEvaluation, user_payload)
-        session_store.append(session_id, "assistant", json.dumps(data, ensure_ascii=False)[:8000])
-        return data
+        raw: Dict[str, Any]
+        if hasattr(data, "model_dump"):
+            raw = data.model_dump()
+        else:
+            raw = dict(data)
+        raw["suspected_problems"] = filter_temperature_labels(report_text, raw.get("suspected_problems", []))
+        raw["red_flags"] = filter_temperature_labels(report_text, raw.get("red_flags", []))
+        session_store.append(session_id, "assistant", json.dumps(raw, ensure_ascii=False)[:8000])
+        return raw
 
     def analyze(self, session_id: str, report_text: str) -> Dict[str, Any]:
         review = self.review_report(session_id=session_id, report_text=report_text)

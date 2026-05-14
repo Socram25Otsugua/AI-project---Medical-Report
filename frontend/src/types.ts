@@ -32,6 +32,17 @@ export type AnalyzeRequest = {
   locale: 'en-UK' | 'pt-PT'
 }
 
+export type ChatTurnRequest = AnalyzeRequest & {
+  user_message?: string
+}
+
+export type ChatTurnResult = {
+  assistant_message: string
+  questions_for_participants: string[]
+  pending_questions: string[]
+  can_finalize_summary: boolean
+}
+
 export type PatientEvaluation = {
   status: 'ok' | 'concerning' | 'critical' | 'unknown'
   summary: string

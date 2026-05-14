@@ -94,7 +94,7 @@ def test_generate_next_step_returns_chain_output(monkeypatch):
         {
             "next_step_message": "Do ABCDE.",
             "rationale_bullets": ["Reason"],
-            "questions_for_participants": [],
+            "questions_for_participants": ["What is the current level of consciousness?", "Any chest pain?"],
         }
     )
     fake_store = InMemorySessionStore()
@@ -136,12 +136,13 @@ def test_generate_next_step_returns_chain_output(monkeypatch):
     out = llm_orchestrator.generate_next_step(
         rag=rag,
         session_id="s1",
-        report_text="report",
+        report_text="Level of consciousness (1-4): 2",
         review_json={"completeness_score": 80},
     )
 
     assert out["next_step_message"] == "Do ABCDE."
     assert fake_store.get("s1")[0].role == "assistant"
+    assert out["questions_for_participants"] == ["Any chest pain?"]
     payload = json.loads(fake_chain.last_payload["payload"])
     assert payload["mcp"]["triage"]["priority"] == "urgent"
 

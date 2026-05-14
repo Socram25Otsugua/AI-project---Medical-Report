@@ -7,6 +7,7 @@ from typing import Any, Dict
 from fastmcp import Client
 
 from app.settings import settings
+from rmrr_mcp.medical_mcp_server import checklist_missing_sections, extract_vitals, triage_priority
 
 
 def _server_script_path() -> str:
@@ -17,10 +18,18 @@ def _server_script_path() -> str:
 
 
 async def call_mcp_tool(tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    # Fast path: execute known local MCP tools in-process to avoid per-call server startup.
+    if tool_name == "checklist_missing_sections":
+        return checklist_missing_sections(**args)
+    if tool_name == "extract_vitals":
+        return extract_vitals(**args)
+    if tool_name == "triage_priority":
+        return triage_priority(**args)
+
+    # Fallback: external MCP invocation for unsupported tools.
     client = Client(_server_script_path())
     async with client:
         result = await client.call_tool(tool_name, args)
-        # fastmcp returns an object with .data (serializable dict)
         return dict(result.data)
 
 

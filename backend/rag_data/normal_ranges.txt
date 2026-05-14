@@ -1,12 +1,12 @@
 NORMAL ADULT VITAL RANGES (REFERENCE)
 
 Heart rate:
-- Typical resting adult: 60-100 bpm
+- Typical resting adult: 50-80 bpm
 - Concerning if persistently <50 or >120 bpm in acute context
 
 Respiratory rate:
 - Typical adult: 12-20 /min
-- Concerning if <8 or >30 /min
+- Concerning if <10 or >25 /min
 
 SpO2:
 - Typical: >=95% on room air
@@ -21,6 +21,7 @@ Temperature:
 - Typical: about 36.0-37.8 C
 - Hypothermia concern: <35 C
 - Fever concern: >=38 C
+- 39 C should be interpreted as fever/hyperthermia (context-dependent), not hypothermia
 
 Capillary refill:
 - Typical: <=2 sec

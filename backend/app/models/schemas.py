@@ -11,6 +11,10 @@ class ReportInput(BaseModel):
     locale: Literal["en-UK", "pt-PT"] = "en-UK"
 
 
+class ChatTurnInput(ReportInput):
+    user_message: str = Field(default="", description="Optional user follow-up message for conversational turns.")
+
+
 class Deficiency(BaseModel):
     area: str
     issue: str
@@ -52,3 +56,10 @@ class AnalyzeResult(BaseModel):
     review: ReviewResult
     response: ResponseResult
     patient_evaluation: PatientEvaluation | None = None
+
+
+class ChatTurnResult(BaseModel):
+    assistant_message: str
+    questions_for_participants: list[str] = Field(default_factory=list)
+    pending_questions: list[str] = Field(default_factory=list)
+    can_finalize_summary: bool = False
