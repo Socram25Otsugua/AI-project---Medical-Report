@@ -7,7 +7,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
 
-from app.settings import settings
+from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL, RAG_COLLECTION, RAG_PERSIST_DIR
 
 
 @dataclass(frozen=True)
@@ -31,12 +31,12 @@ def _doc_source_paths() -> list[Path]:
 
 
 def load_or_build_vectorstore() -> RagDeps:
-    persist_dir = Path(settings.rag_persist_dir)
+    persist_dir = Path(RAG_PERSIST_DIR)
     persist_dir.mkdir(parents=True, exist_ok=True)
 
-    embeddings = OllamaEmbeddings(model=settings.ollama_model, base_url=settings.ollama_base_url)
+    embeddings = OllamaEmbeddings(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL)
     vs = Chroma(
-        collection_name=settings.rag_collection,
+        collection_name=RAG_COLLECTION,
         embedding_function=embeddings,
         persist_directory=str(persist_dir),
     )

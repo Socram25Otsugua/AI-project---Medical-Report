@@ -27,10 +27,10 @@ def test_history_list_and_create_and_delete(monkeypatch):
         store.clear()
         return n
 
-    monkeypatch.setattr("main.list_reports", _fake_list_reports)
-    monkeypatch.setattr("main.create_report", _fake_create_report)
-    monkeypatch.setattr("main.delete_report", _fake_delete_report)
-    monkeypatch.setattr("main.clear_reports", _fake_clear_reports)
+    monkeypatch.setattr("app.routers.history.list_reports", _fake_list_reports)
+    monkeypatch.setattr("app.routers.history.create_report", _fake_create_report)
+    monkeypatch.setattr("app.routers.history.delete_report", _fake_delete_report)
+    monkeypatch.setattr("app.routers.history.clear_reports", _fake_clear_reports)
 
     # Create
     payload = {

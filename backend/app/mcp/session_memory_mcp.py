@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from tools.memory import session_store
+from app.tools.memory import session_store
 
 
 @dataclass(frozen=True)

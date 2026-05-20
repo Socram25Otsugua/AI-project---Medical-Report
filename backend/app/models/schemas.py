@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class ReportInput(BaseModel):
     session_id: str = Field(..., description="Training session identifier (memory).")
     report_text: str = Field(..., description="Pasted Radio Medical Record text (or transcription).")
-    locale: Literal["en-UK", "pt-PT"] = "en-UK"
+    locale: Literal["en-UK"] = "en-UK"
 
 
 class ChatTurnInput(ReportInput):
@@ -63,3 +63,16 @@ class ChatTurnResult(BaseModel):
     questions_for_participants: list[str] = Field(default_factory=list)
     pending_questions: list[str] = Field(default_factory=list)
     can_finalize_summary: bool = False
+
+
+class HistoryItemIn(BaseModel):
+    createdAt: int = Field(..., description="Unix ms timestamp")
+    sourceLabel: str
+    reportText: str
+    result: dict[str, Any]
+    mode: Literal["form", "text"] | None = None
+    indicators: dict[str, Any] | None = None
+
+
+class HistoryItemOut(HistoryItemIn):
+    id: str

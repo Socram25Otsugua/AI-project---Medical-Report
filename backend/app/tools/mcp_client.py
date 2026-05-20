@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 from fastmcp import Client
 
-from app.settings import settings
+from app.config import MCP_SERVER_SCRIPT
 from rmrr_mcp.medical_mcp_server import checklist_missing_sections, extract_vitals, triage_priority
 
 
@@ -14,7 +14,7 @@ def _server_script_path() -> str:
     # Resolve path relative to the backend/ directory.
     here = Path(__file__).resolve()
     backend_root = here.parents[1]
-    return str((backend_root / settings.mcp_server_script).resolve())
+    return str((backend_root / MCP_SERVER_SCRIPT).resolve())
 
 
 async def call_mcp_tool(tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:

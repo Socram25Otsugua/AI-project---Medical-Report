@@ -1,0 +1,83 @@
+CLINICAL NORMAL RANGES REFERENCE
+Maritime Medical Quick Reference Guide
+
+=== VITAL SIGNS NORMAL RANGES ===
+
+Heart Rate (Pulse):
+- Normal adult: 60-80 beats per minute
+- Bradycardia: below 60 bpm
+- Tachycardia: above 100 bpm
+- Critical tachycardia: above 130 bpm
+- Critical bradycardia: below 40 bpm
+
+Breathing Rate (Respiratory Rate):
+- Normal adult: 12-16 breaths per minute
+- Slow (bradypnoea): below 12 bpm
+- Fast (tachypnoea): above 20 bpm
+- Critical: above 30 bpm or below 8 bpm
+
+Oxygen Saturation (SpO2):
+- Normal: 95-100%
+- Mild hypoxia: 90-94% - oxygen required
+- Moderate hypoxia: 85-89% - high flow oxygen, monitor closely
+- Severe hypoxia: below 85% - critical, consider MEDEVAC
+- COPD patients: 88-92% may be acceptable
+
+Blood Pressure:
+- Normal systolic: 120-140 mmHg
+- Normal diastolic: 60-90 mmHg
+- Hypertension: systolic above 140
+- Hypotension: systolic below 90
+- Shock: systolic below 80 - emergency
+- Hypertensive crisis: systolic above 180
+
+Temperature:
+- Normal oral: 36.5 degrees Celsius
+- Normal range: 36.0-37.5 degrees Celsius
+- Low grade fever: 37.5-38.0
+- Fever: above 38.0
+- High fever: above 39.0
+- Hyperthermia: above 40.0 - emergency cooling
+- Mild hypothermia: 32-35 degrees
+- Moderate hypothermia: 28-32 degrees - emergency
+- Severe hypothermia: below 28 degrees - critical
+
+Capillary Refill Time:
+- Normal: less than 2 seconds
+- Prolonged: 2-3 seconds - monitor closely
+- Poor perfusion: above 3 seconds - concern for shock
+
+=== CONSCIOUSNESS LEVELS ===
+Level 1: Awake, alert, well oriented - normal
+Level 2: Confused, responds to questions - concerning
+Level 3: Responds to pain only - serious
+Level 4: Unconscious, no response - critical, MEDEVAC likely
+
+=== COMMON MARITIME MEDICAL SCENARIOS ===
+
+Hypothermia (cold water immersion):
+- Remove wet clothing immediately
+- Warm gradually - avoid rapid rewarming
+- Handle gently - risk of cardiac arrhythmia
+- Monitor core temperature continuously
+- Level 3-4 hypothermia: MEDEVAC required
+
+Trauma (falls, crush injuries):
+- Immobilize spine if mechanism suggests injury
+- Control bleeding with direct pressure
+- Monitor for internal bleeding signs
+- Pain management within medicine chest
+- Photograph injuries if possible
+
+Chest Pain:
+- 12-lead ECG if available
+- Aspirin 300mg if cardiac cause suspected and no contraindications
+- Oxygen if SpO2 below 95%
+- Rest, semi-recumbent position
+- Contact Radio Medical immediately
+
+Diabetic Emergency:
+- Hypoglycemia (low blood sugar): glucose if conscious, glucagon if not
+- Normal blood sugar: 4-7 mmol/liter
+- Below 4: hypoglycemia - sugar/glucose
+- Above 15: hyperglycemia - insulin if available, fluids, Radio Medical

@@ -1,0 +1,54 @@
+RADIO MEDICAL PROCEDURES
+Danish Maritime Authority - Telemedicine Guidelines
+
+=== CONTACTING RADIO MEDICAL ===
+Radio Medical Denmark provides 24/7 medical advice to ships at sea.
+Contact should be made when:
+- Any serious illness or injury occurs on board
+- The medical officer is uncertain about treatment
+- Patient condition is deteriorating
+- MEDEVAC may be required
+
+Required information when calling:
+- Ship name, call sign, and position (coordinates)
+- Satellite phone number and ship email
+- Patient name, age, gender, nationality
+- Description of problem: what happened, when, where, symptoms
+- Current vital signs (ABCDE assessment)
+- Medications given before contact
+- Distance and ETA to nearest port
+
+=== REPORTING FORMAT ===
+Always report in ABCDE order:
+1. Airway: is it clear, what interventions were done, oxygen given
+2. Breathing: rate, depth, oxygen saturation
+3. Circulation: pulse rate and location, blood pressure, skin color, capillary refill
+4. Disability: consciousness level, pupils, convulsions, paralysis
+5. Expose: temperature, injuries found, top-to-toe performed
+
+=== MEDEVAC CRITERIA ===
+Request MEDEVAC (medical evacuation) when:
+- Patient is unconscious or consciousness level 3-4
+- Oxygen saturation below 88% despite maximum oxygen
+- Systolic blood pressure below 80 mmHg despite fluid resuscitation
+- Heart rate above 140 or below 40 despite treatment
+- Suspected internal bleeding or major trauma
+- Severe chest pain with ECG changes
+- Stroke symptoms: facial droop, arm weakness, speech difficulty
+- Severe burns covering more than 15% body surface
+- Obstetric emergency
+- Any condition where delay threatens life
+
+=== FOLLOW-UP REPORTING ===
+After initial contact, report back as instructed by Radio Medical.
+Typical intervals:
+- Critical patients (level 3-4): every 15 minutes
+- Serious patients (level 2): every 30 minutes
+- Stable patients (level 1): every 60 minutes
+- Always report immediately if condition changes
+
+=== DOCUMENTATION ===
+Document all observations and treatments on the Radio Medical Record.
+Include times for all interventions.
+Keep record for medicolegal purposes.
+Send completed form by email to Radio Medical after contact.

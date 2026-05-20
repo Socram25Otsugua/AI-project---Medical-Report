@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from agents.tools.mcp_tools import mcp_checklist_missing_sections, mcp_extract_vitals, mcp_triage_priority
+from app.tools.mcp_client import call_mcp_tool_sync
 
 
 _VITAL_SLOTS = [
@@ -53,11 +53,11 @@ def get_report_mcp_context(report_text: str, *, include_checklist: bool = True) 
     This keeps MCP calls centralized so orchestrators can consistently enrich
     prompts with structured safety and completeness signals.
     """
-    vitals = mcp_extract_vitals.invoke({"report_text": report_text})
-    triage = mcp_triage_priority.invoke({"vitals": vitals})
+    vitals = call_mcp_tool_sync("extract_vitals", {"report_text": report_text})
+    triage = call_mcp_tool_sync("triage_priority", {"vitals": vitals})
 
     context: Dict[str, Any] = {"vitals": vitals, "triage": triage}
     if include_checklist:
-        context["missing_sections"] = mcp_checklist_missing_sections.invoke({"report_text": report_text})
+        context["missing_sections"] = call_mcp_tool_sync("checklist_missing_sections", {"report_text": report_text})
 
     return context

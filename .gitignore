@@ -6,6 +6,7 @@ backend/.venv/
 *.pyc
 backend/.pytest_cache/
 backend/.chroma/
+backend/.data/
 
 # Node
 frontend/node_modules/

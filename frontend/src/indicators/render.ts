@@ -1,5 +1,7 @@
 import type { IndicatorsState, SectionDef } from './schema'
 
+const BOOLEAN_FIELDS_TO_KEEP_WHEN_NO = new Set(['has_medicine', 'has_allergies'])
+
 function valToString(v: string | number | boolean): string {
   if (typeof v === 'boolean') return v ? 'Yes' : 'No'
   return String(v ?? '').trim()
@@ -16,8 +18,11 @@ export function indicatorsToReportText(sections: SectionDef[], state: Indicators
     for (const f of s.fields) {
       const v = state[f.key]
       const vs = valToString(v)
-      if (vs === '' || vs === 'No') {
-        // keep empties out; checkboxes false are noise
+      if (vs === '') {
+        continue
+      }
+      if (vs === 'No' && !BOOLEAN_FIELDS_TO_KEEP_WHEN_NO.has(f.key)) {
+        // keep most false checkboxes out; preserve clinically important negatives
         continue
       }
       const unit = f.unit ? ` ${f.unit}` : ''

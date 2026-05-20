@@ -2,6 +2,7 @@ import json
 from types import SimpleNamespace
 
 from app.services import llm_orchestrator
+from app.services.conversation_state import clear_state
 from tools.memory import InMemorySessionStore
 
 
@@ -203,3 +204,62 @@ def test_evaluate_patient_includes_mcp_vitals(monkeypatch):
     payload = json.loads(fake_chain.last_payload["payload"])
     assert payload["mcp"]["vitals"]["spo2_percent"] == 91
     assert payload["mcp"]["triage"]["priority"] == "critical"
+
+
+def test_is_answer_already_in_report_uses_mcp_vitals():
+    report_text = """
+    - Oxygen saturation: 91 %
+    - Clear airways: yes
+    - Does the patient have any allergies?: No
+    """.strip()
+    mcp_context = {"vitals": {"spo2_percent": 91}}
+
+    assert llm_orchestrator._is_answer_already_in_report("What is the patient's oxygen saturation?", report_text, mcp_context)
+    assert llm_orchestrator._is_answer_already_in_report("Is the patient's airway clear?", report_text, mcp_context)
+    assert llm_orchestrator._is_answer_already_in_report(
+        "Does the patient have any known drug allergies?", report_text, mcp_context
+    )
+
+
+def test_chat_doctor_turn_filters_questions_already_in_report(monkeypatch):
+    clear_state("s-chat-filter")
+    fake_store = InMemorySessionStore()
+
+    monkeypatch.setattr(llm_orchestrator, "session_store", fake_store)
+    monkeypatch.setattr(llm_orchestrator, "rag_search", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "medical_guidelines_mcp",
+        SimpleNamespace(get_context_string=lambda _text, k=1: "guidelines"),
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "scenario_context_mcp",
+        SimpleNamespace(get_scenario=lambda _text: {"success": True, "scenario": {"detected_type": "default"}}),
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "get_report_mcp_context",
+        lambda report_text, include_checklist: {"vitals": {"spo2_percent": 91}, "triage": {"priority": "urgent"}},
+    )
+    monkeypatch.setattr(
+        llm_orchestrator,
+        "invoke_short_term_chat_turn",
+        lambda session_id, payload: {
+            "assistant_message": "Continue monitoring and reassess in 5 minutes.",
+            "questions_for_participants": [
+                "What is the patient's oxygen saturation?",
+                "Is active bleeding controlled now?",
+            ],
+            "answered_questions": [],
+        },
+    )
+
+    report_text = """
+    - Oxygen saturation: 91 %
+    - Clear airways: yes
+    """.strip()
+    rag = SimpleNamespace(vectorstore=object())
+    out = llm_orchestrator.chat_doctor_turn(rag=rag, session_id="s-chat-filter", report_text=report_text, user_message="")
+
+    assert out["questions_for_participants"] == ["Is active bleeding controlled now?"]

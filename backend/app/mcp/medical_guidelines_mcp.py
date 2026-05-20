@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from tools.rag import load_or_build_vectorstore, rag_search
+from app.tools.rag import load_or_build_vectorstore, rag_search
 
 
 @dataclass(frozen=True)

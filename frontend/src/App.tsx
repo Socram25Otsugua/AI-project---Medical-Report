@@ -240,6 +240,12 @@ function App() {
     [result, pendingQuestions.length, hasAllRequiredVitals],
   )
   const canFinalizeNow = useMemo(() => pendingQuestions.length === 0 && hasAllRequiredVitals, [pendingQuestions.length, hasAllRequiredVitals])
+  const summaryBlockReason = useMemo(() => {
+    if (!hasAllRequiredVitals) return 'Complete all required vitals first.'
+    if (pendingQuestions.length > 0) return 'Answer all follow-up chat questions first.'
+    if (chatMessages.length === 0) return 'Start chat at least once before generating summary.'
+    return null
+  }, [hasAllRequiredVitals, pendingQuestions.length, chatMessages.length])
 
   const canAskDoctor = useMemo(() => {
     if (busy) return false
@@ -602,9 +608,13 @@ function App() {
                   }
                   return
                 }
-                if (summaryReady || summarySaved || Boolean(selectedHistoryId)) setActiveTab('summary')
+                if (summaryReady || summarySaved || Boolean(selectedHistoryId)) {
+                  setActiveTab('summary')
+                  return
+                }
+                setError(summaryBlockReason ?? 'Summary is not ready yet.')
               }}
-              disabled={!summaryReady && !summarySaved && !selectedHistoryId && !canFinalizeNow}
+              disabled={busy}
             >
               Summary
             </button>
@@ -740,9 +750,13 @@ function App() {
                       }
                       return
                     }
-                    setActiveTab('summary')
+                    if (summaryReady || summarySaved || Boolean(selectedHistoryId)) {
+                      setActiveTab('summary')
+                      return
+                    }
+                    setError(summaryBlockReason ?? 'Summary is not ready yet.')
                   }}
-                  disabled={!summaryReady && !summarySaved && !selectedHistoryId && !canFinalizeNow}
+                  disabled={busy}
                 >
                   View summary
                 </button>

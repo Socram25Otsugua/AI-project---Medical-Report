@@ -12,6 +12,9 @@ class ConversationState:
     pending_questions: list[str] = field(default_factory=list)
     asked_keys: set[str] = field(default_factory=set)
     answered_keys: set[str] = field(default_factory=set)
+    cached_rag_context: str = ""
+    cached_guidelines_context: str = ""
+    cached_scenario_context: dict = field(default_factory=dict)
 
 
 _STATES: dict[str, ConversationState] = {}
