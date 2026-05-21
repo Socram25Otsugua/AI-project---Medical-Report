@@ -16,7 +16,11 @@ export type ReviewResult = {
 }
 
 export type ResponseResult = {
-  next_step_message: string
+  immediate_actions?: string[]
+  monitoring_parameters?: string[]
+  escalation_criteria?: string[]
+  /** Legacy field from older saved reports. */
+  next_step_message?: string
   rationale_bullets: string[]
   questions_for_participants: string[]
 }

@@ -180,31 +180,72 @@
   color: var(--text);
 }
 
-.historyScore {
-  min-width: 34px;
-  height: 22px;
+.historyIndicators {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.historyBadge {
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
 }
 
-.historyScore.s-g {
-  background: #e9f8ef;
-  border-color: #9ad5b1;
+.historyBadge.c-r {
+  background: #e0555a;
+  border-color: #cb3948;
 }
 
-.historyScore.s-y {
-  background: #fff4e2;
-  border-color: #f1cf94;
+.historyBadge.c-y {
+  background: #f1b732;
+  border-color: #d89a1d;
+  color: #5f460f;
 }
 
-.historyScore.s-r {
-  background: #ffeced;
-  border-color: #f0a8ae;
+.historyBadge.c-g {
+  background: #22b570;
+  border-color: #17945a;
+}
+
+.historyBadge.v-critical {
+  background: #d63b43;
+  border-color: #b52a32;
+}
+
+.historyBadge.v-bad {
+  background: #ef8e2e;
+  border-color: #d97716;
+}
+
+.historyBadge.v-concerning {
+  background: #f1b732;
+  border-color: #d89a1d;
+  color: #5f460f;
+}
+
+.historyBadge.v-ok {
+  background: #8fd9a8;
+  border-color: #6fc48d;
+  color: #1f5a36;
+}
+
+.historyBadge.v-excellent {
+  background: #17945a;
+  border-color: #127a4a;
+}
+
+.historyBadge.v-unknown {
+  background: #b4c6da;
+  border-color: #95aac2;
+  color: #3f5870;
 }
 
 .iconBtn {
@@ -456,6 +497,12 @@
   outline: none;
   border-color: #77b0ff;
   box-shadow: 0 0 0 3px rgba(47, 134, 255, 0.15);
+}
+
+.fieldInput:disabled {
+  background: #f3f7fb;
+  color: #607b95;
+  cursor: not-allowed;
 }
 
 .textareaSmall {
@@ -895,6 +942,13 @@
   color: #1a4165;
 }
 
+.numberedList {
+  margin: 0;
+  padding-left: 20px;
+  color: #1a4165;
+  line-height: 1.45;
+}
+
 .error {
   margin-top: 4px;
   border: 1px solid #edafb6;
@@ -907,6 +961,188 @@
 .empty {
   color: #7290ac;
   padding: 10px;
+}
+
+.formLockedNotice {
+  border: 1px solid #b8d4f5;
+  background: #eef6ff;
+  color: #1f4f7a;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.buttonAttention {
+  background: #f0ad4e;
+  border-color: #e39b35;
+}
+
+.chatObservationCard {
+  margin-bottom: 4px;
+}
+
+.obsChart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.obsChartHeaderBar {
+  background: linear-gradient(90deg, #1f5f99 0%, #2f86ff 100%);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.obsChartNotice {
+  border: 1px solid #efb9c0;
+  background: #fff1f3;
+  color: #7e2430;
+  border-radius: 11px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.obsChartNoticeTitle {
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.obsChartScroll {
+  overflow: auto;
+  border: 1px solid #c8dced;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.obsChartTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+}
+
+.obsChartTable th,
+.obsChartTable td {
+  border: 1px solid #d7e4f1;
+  padding: 6px;
+  vertical-align: middle;
+}
+
+.obsChartLabelCol {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 260px;
+  background: #f4f9ff;
+  text-align: left;
+  font-size: 12px;
+  color: #204972;
+}
+
+.obsChartDataCol {
+  min-width: 110px;
+  background: #fbfdff;
+  text-align: center;
+  font-size: 11px;
+  color: #567a99;
+}
+
+.obsChartColTitle {
+  display: block;
+  font-weight: 700;
+}
+
+.obsChartLockedTag {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #edf2f7;
+  color: #607b95;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.obsChartRowLabel {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f4668;
+}
+
+.obsChartRowMandatory .obsChartRowLabel {
+  background: #fffdf8;
+}
+
+.obsChartRequiredMark {
+  margin-left: 4px;
+  color: #c0392b;
+}
+
+.obsChartInput {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dbe6f1;
+  border-radius: 8px;
+  padding: 6px 7px;
+  font: inherit;
+  font-size: 12px;
+  color: #17314c;
+  background: #fff;
+}
+
+.obsChartInput:focus {
+  outline: none;
+  border-color: #77b0ff;
+  box-shadow: 0 0 0 2px rgba(47, 134, 255, 0.12);
+}
+
+.obsChartInput:disabled {
+  background: #f3f7fb;
+  color: #607b95;
+}
+
+.obsChartInputMissing {
+  border-color: #efb9c0;
+  background: #fff8f9;
+}
+
+.obsChartLegend {
+  border: 1px solid #dbe6f1;
+  border-radius: 12px;
+  background: #fbfdff;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #35516f;
+}
+
+.obsChartLegendTitle {
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: #204972;
+}
+
+.obsChartLegendGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.obsChartLegendGrid ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
+
+.obsChartLegendNote {
+  margin: 10px 0 0;
+  color: #6783a0;
 }
 
 @media (max-width: 1100px) {
@@ -996,7 +1232,8 @@
 @media (max-width: 860px) {
   .fields,
   .factsGrid,
-  .clinicalBody {
+  .clinicalBody,
+  .obsChartLegendGrid {
     grid-template-columns: 1fr;
   }
   .chatComposer {

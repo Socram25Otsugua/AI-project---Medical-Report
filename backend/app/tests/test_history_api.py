@@ -37,7 +37,7 @@ def test_history_list_and_create_and_delete(monkeypatch):
         "createdAt": 123,
         "sourceLabel": "Patient A",
         "reportText": "text",
-        "result": {"review": {"completeness_score": 80, "deficiencies": [], "safety_flags": [], "vitals_score": 0, "vitals_feedback": []}, "response": {"next_step_message": "x", "rationale_bullets": [], "questions_for_participants": []}},
+        "result": {"review": {"completeness_score": 80, "deficiencies": [], "safety_flags": [], "vitals_score": 0, "vitals_feedback": []}, "response": {"immediate_actions": ["x"], "monitoring_parameters": [], "escalation_criteria": [], "rationale_bullets": [], "questions_for_participants": []}},
         "mode": "form",
         "indicators": {"patient_name": "Patient A"},
     }

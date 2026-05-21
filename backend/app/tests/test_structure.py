@@ -2,15 +2,16 @@ from pathlib import Path
 
 
 def test_required_backend_structure_exists():
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     required_paths = [
-        root / "agents",
-        root / "agents" / "tools",
+        root / "app" / "main.py",
         root / "app" / "models",
-        root / "tools",
-        root / "tests",
+        root / "app" / "routers",
+        root / "app" / "services",
+        root / "app" / "tests",
+        root / "app" / "tools",
         root / "requirements.txt",
-        root / "main.py",
+        root / "rmrr_mcp" / "medical_mcp_server.py",
     ]
     for p in required_paths:
         assert p.exists(), f"Missing required path: {p}"

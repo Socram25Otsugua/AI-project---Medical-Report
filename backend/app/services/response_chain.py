@@ -8,7 +8,7 @@ from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from app.mcp import get_report_mcp_context, medical_guidelines_mcp, scenario_context_mcp, session_memory_mcp
+from app.mcp import build_enriched_mcp_context, session_memory_mcp
 from app.models.schemas import ResponseResult
 from app.prompts import RESPONSE_SYSTEM_PROMPT
 from app.services.analysis_guardrails import filter_questions, filter_temperature_labels
@@ -34,9 +34,7 @@ def _filter_redundant_questions(report_text: str, questions: list[str]) -> list[
 def generate_next_step(rag: RagDeps, session_id: str, report_text: str, review_json: Dict[str, Any]) -> Dict[str, Any]:
     docs = rag_search(rag.vectorstore, query="ABCDE stabilization escalation guidance questions", k=4)
     context = format_rag_context(docs)
-    mcp_context = get_report_mcp_context(report_text, include_checklist=True)
-    mcp_context["scenario_context"] = scenario_context_mcp.get_scenario(report_text)
-    mcp_context["guidelines_context"] = medical_guidelines_mcp.get_context_string(report_text, k=3)
+    mcp_context = build_enriched_mcp_context(report_text, include_checklist=True)
     mcp_history = session_memory_mcp.get_context_string(session_id)
 
     user_payload = {
@@ -62,11 +60,35 @@ def generate_next_step(rag: RagDeps, session_id: str, report_text: str, review_j
     else:
         raw = dict(data)
 
+    def _as_str_list(key: str) -> list[str]:
+        value = raw.get(key)
+        if not isinstance(value, list):
+            return []
+        return [str(item).strip() for item in value if str(item).strip()]
+
     # Defensive normalization: some models can drift into review-style JSON.
-    if not isinstance(raw.get("next_step_message"), str) or not str(raw.get("next_step_message")).strip():
-        raw["next_step_message"] = (
-            "Continue ABCDE reassessment, stabilize current abnormalities, and document the next set of observations."
-        )
+    raw["immediate_actions"] = _as_str_list("immediate_actions")
+    raw["monitoring_parameters"] = _as_str_list("monitoring_parameters")
+    raw["escalation_criteria"] = _as_str_list("escalation_criteria")
+    legacy_next_step = str(raw.get("next_step_message") or "").strip()
+    if not raw["immediate_actions"] and legacy_next_step:
+        raw["immediate_actions"] = [legacy_next_step]
+    if not raw["immediate_actions"]:
+        raw["immediate_actions"] = [
+            "Continue ABCDE reassessment and stabilize current abnormalities.",
+            "Document the next set of observations and treatments given.",
+        ]
+    if not raw["monitoring_parameters"]:
+        raw["monitoring_parameters"] = [
+            "Recheck vital signs every 15 minutes until stable, then every 30 minutes.",
+            "Monitor level of consciousness, breathing effort, and SpO2 continuously.",
+        ]
+    if not raw["escalation_criteria"]:
+        raw["escalation_criteria"] = [
+            "Call Radio Medical again if any vital sign worsens or consciousness decreases.",
+            "Request MEDEVAC if stabilization fails or red-flag criteria persist.",
+        ]
+    raw["next_step_message"] = legacy_next_step or raw["immediate_actions"][0]
     if not isinstance(raw.get("rationale_bullets"), list):
         raw["rationale_bullets"] = []
     if not isinstance(raw.get("questions_for_participants"), list):

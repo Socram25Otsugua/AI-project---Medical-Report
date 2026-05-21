@@ -1,6 +1,0 @@
-description: "Report with missing vital signs"
-vars:
-  report_text: |
-    Problem: sailor found unresponsive in cabin.
-    Breathing appears shallow.
-    No SpO2, pulse, blood pressure, or temperature documented.

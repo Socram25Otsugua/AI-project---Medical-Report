@@ -11,7 +11,9 @@ def test_review_prompt_includes_required_sections():
 def test_response_prompt_mentions_abcde_and_questions():
     assert "ABCDE" in RESPONSE_SYSTEM_PROMPT
     assert "questions_for_participants" in RESPONSE_SYSTEM_PROMPT
-    assert "next_step_message" in RESPONSE_SYSTEM_PROMPT
+    assert "immediate_actions" in RESPONSE_SYSTEM_PROMPT
+    assert "monitoring_parameters" in RESPONSE_SYSTEM_PROMPT
+    assert "escalation_criteria" in RESPONSE_SYSTEM_PROMPT
 
 
 def test_patient_eval_prompt_has_status_schema():

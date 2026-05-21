@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import AnalyzeResult, ReportInput, ReviewResult
+from app.models.schemas import AnalyzeResult, ReportInput, ReviewResult
 
 
 def test_report_input_defaults_locale():
@@ -32,7 +32,9 @@ def test_analyze_result_parses_nested_payload():
             "vitals_score": 0,
         },
         response={
-            "next_step_message": "Continue ABCDE.",
+            "immediate_actions": ["Continue ABCDE reassessment."],
+            "monitoring_parameters": ["Recheck vitals every 15 minutes."],
+            "escalation_criteria": ["Call again if consciousness decreases."],
             "rationale_bullets": ["Structured approach."],
             "questions_for_participants": ["Any allergies?"],
         },
@@ -45,6 +47,6 @@ def test_analyze_result_parses_nested_payload():
     )
     assert result.review.completeness_score == 75
     assert result.review.vitals_score == 0
-    assert result.response.next_step_message.startswith("Continue")
+    assert result.response.immediate_actions[0].startswith("Continue")
     assert result.patient_evaluation is not None
     assert result.patient_evaluation.status == "unknown"

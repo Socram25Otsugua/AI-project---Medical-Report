@@ -7,7 +7,7 @@ from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from app.mcp import get_report_mcp_context, medical_guidelines_mcp, scenario_context_mcp, session_memory_mcp
+from app.mcp import build_enriched_mcp_context, session_memory_mcp
 from app.models.schemas import PatientEvaluation
 from app.prompts import PATIENT_EVAL_SYSTEM_PROMPT
 from app.services.analysis_guardrails import filter_temperature_labels
@@ -19,9 +19,7 @@ from app.tools.rag import RagDeps, rag_search
 def evaluate_patient(rag: RagDeps, session_id: str, report_text: str, review_json: Dict[str, Any]) -> Dict[str, Any]:
     docs = rag_search(rag.vectorstore, query="ABCDE red flags triage assessment vitals", k=4)
     context = format_rag_context(docs)
-    mcp_context = get_report_mcp_context(report_text, include_checklist=True)
-    mcp_context["scenario_context"] = scenario_context_mcp.get_scenario(report_text)
-    mcp_context["guidelines_context"] = medical_guidelines_mcp.get_context_string(report_text, k=3)
+    mcp_context = build_enriched_mcp_context(report_text, include_checklist=True)
     mcp_history = session_memory_mcp.get_context_string(session_id)
 
     user_payload = {

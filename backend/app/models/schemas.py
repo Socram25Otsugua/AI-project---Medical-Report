@@ -40,7 +40,22 @@ class ReviewResult(BaseModel):
 
 
 class ResponseResult(BaseModel):
-    next_step_message: str
+    immediate_actions: list[str] = Field(
+        default_factory=list,
+        description="Numbered priority actions for the vessel crew to perform now.",
+    )
+    monitoring_parameters: list[str] = Field(
+        default_factory=list,
+        description="What to measure and how often during ongoing care.",
+    )
+    escalation_criteria: list[str] = Field(
+        default_factory=list,
+        description="When to call Radio Medical again or request MEDEVAC.",
+    )
+    next_step_message: str = Field(
+        default="",
+        description="Legacy single-message field; kept for older saved reports.",
+    )
     rationale_bullets: list[str] = Field(default_factory=list)
     questions_for_participants: list[str] = Field(default_factory=list)
 

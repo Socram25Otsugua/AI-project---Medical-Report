@@ -8,9 +8,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.mcp import (
-    get_report_mcp_context,
-    medical_guidelines_mcp,
-    scenario_context_mcp,
+    build_enriched_mcp_context,
     session_memory_mcp,
     vitals_coverage_feedback,
     vitals_coverage_score,
@@ -24,15 +22,8 @@ from app.tools.rag import RagDeps, rag_search
 
 
 def review_report(rag: RagDeps, session_id: str, report_text: str) -> Dict[str, Any]:
-    history = session_store.get(session_id)[-6:]
-    memory_snippet = "\n".join([f"{t.role}: {t.content}" for t in history]) if history else ""
-    mcp_history = session_memory_mcp.get_context_string(session_id)
-    if mcp_history != "No previous exchanges in this session.":
-        memory_snippet = mcp_history
-
-    mcp_context = get_report_mcp_context(report_text, include_checklist=True)
-    mcp_context["scenario_context"] = scenario_context_mcp.get_scenario(report_text)
-    mcp_context["guidelines_context"] = medical_guidelines_mcp.get_context_string(report_text, k=3)
+    memory_snippet = session_memory_mcp.get_context_string(session_id)
+    mcp_context = build_enriched_mcp_context(report_text, include_checklist=True)
 
     docs = rag_search(rag.vectorstore, query="Radio Medical Record checklist ABCDE vitals history actions", k=4)
     context = format_rag_context(docs)

@@ -24,7 +24,9 @@ def test_analyze_endpoint_mocked(monkeypatch):
 
     def _fake_respond(*args, **kwargs):
         return {
-            "next_step_message": "Do ABCDE.",
+            "immediate_actions": ["Do ABCDE."],
+            "monitoring_parameters": ["Recheck SpO2 every 15 minutes."],
+            "escalation_criteria": ["Call again if SpO2 drops below 92%."],
             "rationale_bullets": ["Because."],
             "questions_for_participants": ["What is the SpO2?"],
         }
@@ -37,9 +39,9 @@ def test_analyze_endpoint_mocked(monkeypatch):
             "red_flags": [],
         }
 
-    monkeypatch.setattr("main.review_report", _fake_review)
-    monkeypatch.setattr("main.generate_next_step", _fake_respond)
-    monkeypatch.setattr("main.evaluate_patient", _fake_eval)
+    monkeypatch.setattr("app.routers.reports.review_report", _fake_review)
+    monkeypatch.setattr("app.routers.reports.generate_next_step", _fake_respond)
+    monkeypatch.setattr("app.routers.reports.evaluate_patient", _fake_eval)
 
     r = client.post(
         "/api/v1/reports/analyze",
@@ -48,7 +50,7 @@ def test_analyze_endpoint_mocked(monkeypatch):
     assert r.status_code == 200
     body = r.json()
     assert body["review"]["completeness_score"] == 80
-    assert "next_step_message" in body["response"]
+    assert body["response"]["immediate_actions"][0] == "Do ABCDE."
     assert body["patient_evaluation"]["status"] == "unknown"
 
 
@@ -64,7 +66,7 @@ def test_review_endpoint_mocked(monkeypatch):
             "vitals_score": 60,
         }
 
-    monkeypatch.setattr("main.review_report", _fake_review)
+    monkeypatch.setattr("app.routers.reports.review_report", _fake_review)
 
     r = client.post(
         "/api/v1/reports/review",
@@ -89,13 +91,15 @@ def test_respond_endpoint_mocked(monkeypatch):
 
     def _fake_respond(*args, **kwargs):
         return {
-            "next_step_message": "Proceed with ABCDE.",
+            "immediate_actions": ["Proceed with ABCDE."],
+            "monitoring_parameters": ["Monitor vitals every 15 minutes."],
+            "escalation_criteria": ["Call again if condition worsens."],
             "rationale_bullets": ["reason"],
             "questions_for_participants": ["question"],
         }
 
-    monkeypatch.setattr("main.review_report", _fake_review)
-    monkeypatch.setattr("main.generate_next_step", _fake_respond)
+    monkeypatch.setattr("app.routers.reports.review_report", _fake_review)
+    monkeypatch.setattr("app.routers.reports.generate_next_step", _fake_respond)
 
     r = client.post(
         "/api/v1/reports/respond",
@@ -103,5 +107,4 @@ def test_respond_endpoint_mocked(monkeypatch):
     )
 
     assert r.status_code == 200
-    assert "next_step_message" in r.json()
-
+    assert r.json()["immediate_actions"][0] == "Proceed with ABCDE."

@@ -31,15 +31,26 @@ def _report_signals(report_text: str) -> Dict[str, bool]:
         "jaw_lift_performed": _has_labeled_value(report_text, [r"jaw lift performed"]),
         "oxygen_flow_rate": _has_labeled_value(
             report_text,
-            [r"oxygen administered", r"oxygen", r"obs_oxygen_l_min", r"oxygen flow"],
+            [r"oxygen administered", r"oxygen", r"obs_oxygen_l_min", r"oxygen flow", r"oxygen liters/min"],
         ),
         "breathing_frequency": _has_labeled_value(
             report_text,
             [r"breathing frequency", r"breathing rate", r"respiratory rate"],
         ),
+        "heart_rate": _has_labeled_value(report_text, [r"heart rate", r"pulse"]),
+        "spo2": _has_labeled_value(report_text, [r"spo2", r"oxygen saturation"]),
+        "blood_pressure": _has_labeled_value(report_text, [r"blood pressure", r"bp systolic", r"bp diastolic"]),
+        "temperature": _has_labeled_value(
+            report_text,
+            [r"temperature", r"temp\. measured", r"temp \(mouth\)", r"temp_mouth"],
+        ),
+        "consciousness": _has_labeled_value(
+            report_text,
+            [r"level of consciousness", r"consciousness \(1", r"avpu", r"gcs"],
+        ),
         "pupil_reaction_description": _has_labeled_value(
             report_text,
-            [r"if abnormal:\s*describe", r"pupil reaction description"],
+            [r"if abnormal:\s*describe", r"pupil reaction description", r"pupil reaction \(normal"],
         ),
     }
 
@@ -58,6 +69,30 @@ def _should_drop_contradictory_text(text: str, signals: Dict[str, bool]) -> bool
         return True
     if signals["pupil_reaction_description"] and "pupil" in t and any(
         k in t for k in ["missing", "not described", "no description"]
+    ):
+        return True
+    if signals["heart_rate"] and any(k in t for k in ["heart rate", "pulse"]) and any(
+        k in t for k in ["what is", "please provide", "record", "missing", "not documented", "current"]
+    ):
+        return True
+    if signals["spo2"] and "spo2" in t and any(
+        k in t for k in ["what is", "please provide", "record", "missing", "not documented", "current", "oxygen saturation"]
+    ):
+        return True
+    if signals["breathing_frequency"] and any(k in t for k in ["breathing", "respiratory"]) and any(
+        k in t for k in ["what is", "please provide", "record", "missing", "not documented", "current"]
+    ):
+        return True
+    if signals["blood_pressure"] and "blood pressure" in t and any(
+        k in t for k in ["what is", "please provide", "record", "missing", "not documented", "current"]
+    ):
+        return True
+    if signals["temperature"] and "temperature" in t and any(
+        k in t for k in ["what is", "please provide", "record", "missing", "not documented", "current", "temp"]
+    ):
+        return True
+    if signals["consciousness"] and "consciousness" in t and any(
+        k in t for k in ["what is", "please provide", "record", "missing", "not documented", "current", "avpu", "gcs"]
     ):
         return True
     return False

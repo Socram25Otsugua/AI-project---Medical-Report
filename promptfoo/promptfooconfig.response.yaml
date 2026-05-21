@@ -1,42 +1,39 @@
-description: Radio Medical Record prompt tests (response) — Ollama
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: Radio Medical AI — response prompt contract tests (Ollama)
 
 providers:
   - id: ollama:chat:llama3.1
     config:
       temperature: 0.2
       passthrough:
-        format: "json"
+        format: json
 
 prompts:
-  - prompts/response.txt
+  - file://prompts/response.txt
+
+defaultTest:
+  options:
+    provider: ollama:chat:llama3.1
+  assert:
+    - type: contains-json
 
 tests:
-  - description: returns JSON with next_step_message
+  - description: Response — returns action plan JSON aligned with production schema
+    tags: [response, schema, regression]
     vars:
       report_text: file://fixtures/report_minimal.txt
+      review_json: file://fixtures/review_complete.json
     assert:
-      - type: contains-json
       - type: javascript
-        value: |
-          const match = (output || '').match(/\{[\s\S]*\}/);
-          if (!match) return false;
-          const out = JSON.parse(match[0]);
-          return (
-            out &&
-            typeof out.next_step_message === 'string' &&
-            Array.isArray(out.rationale_bullets) &&
-            Array.isArray(out.questions_for_participants)
-          );
+        value: file://assertions/response-schema.cjs
 
-  - description: asks at least one question when report is sparse
+  - description: Response — addresses undocumented vitals via questions or immediate actions
+    tags: [response, vitals-gap, regression]
     vars:
       report_text: file://fixtures/report_missing_vitals.txt
+      review_json: file://fixtures/review_sparse.json
     assert:
-      - type: contains-json
       - type: javascript
-        value: |
-          const match = (output || '').match(/\{[\s\S]*\}/);
-          if (!match) return false;
-          const out = JSON.parse(match[0]);
-          return Array.isArray(out.questions_for_participants) && out.questions_for_participants.length >= 1;
-
+        value: file://assertions/response-schema.cjs
+      - type: javascript
+        value: file://assertions/response-addresses-vitals-gap.cjs

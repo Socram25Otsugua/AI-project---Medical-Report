@@ -45,5 +45,3 @@ OLLAMA_CHAT_TEMPERATURE = _get_float("OLLAMA_CHAT_TEMPERATURE", 0.1)
 
 RAG_PERSIST_DIR = _get_str("RAG_PERSIST_DIR", ".chroma")
 RAG_COLLECTION = _get_str("RAG_COLLECTION", "medical_training_kb")
-
-MCP_SERVER_SCRIPT = _get_str("MCP_SERVER_SCRIPT", "rmrr_mcp/medical_mcp_server.py")

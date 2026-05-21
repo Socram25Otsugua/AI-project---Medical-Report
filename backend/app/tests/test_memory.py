@@ -1,4 +1,4 @@
-from tools.memory import InMemorySessionStore
+from app.tools.memory import InMemorySessionStore
 
 
 def test_session_store_append_get_and_clear():

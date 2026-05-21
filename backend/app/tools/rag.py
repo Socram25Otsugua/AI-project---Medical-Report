@@ -15,19 +15,8 @@ class RagDeps:
     vectorstore: Chroma
 
 
-def _kb_dir() -> Path:
-    return Path(__file__).resolve().parents[1] / "knowledge_base"
-
-
 def _rag_data_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "rag_data"
-
-
-def _doc_source_paths() -> list[Path]:
-    """
-    Source directories for local RAG documents.
-    """
-    return [p for p in (_kb_dir(), _rag_data_dir()) if p.exists()]
 
 
 def load_or_build_vectorstore() -> RagDeps:
@@ -41,10 +30,10 @@ def load_or_build_vectorstore() -> RagDeps:
         persist_directory=str(persist_dir),
     )
 
-    # Idempotent: if empty, index local knowledge-base docs.
     if vs._collection.count() == 0:
         docs: list[Document] = []
-        for source_dir in _doc_source_paths():
+        source_dir = _rag_data_dir()
+        if source_dir.exists():
             for p in sorted(source_dir.glob("**/*")):
                 if not p.is_file():
                     continue

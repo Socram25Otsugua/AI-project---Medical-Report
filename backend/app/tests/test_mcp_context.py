@@ -4,18 +4,12 @@ from app import mcp
 def test_get_report_mcp_context_with_checklist(monkeypatch):
     monkeypatch.setattr(
         mcp.context,
-        "mcp_extract_vitals",
-        type("T", (), {"invoke": staticmethod(lambda args: {"spo2_percent": 93})}),
-    )
-    monkeypatch.setattr(
-        mcp.context,
-        "mcp_triage_priority",
-        type("T", (), {"invoke": staticmethod(lambda args: {"priority": "urgent"})}),
-    )
-    monkeypatch.setattr(
-        mcp.context,
-        "mcp_checklist_missing_sections",
-        type("T", (), {"invoke": staticmethod(lambda args: {"missing": ["identity"]})}),
+        "call_mcp_tool_sync",
+        lambda tool_name, args: {
+            "extract_vitals": {"spo2_percent": 93},
+            "triage_priority": {"priority": "urgent"},
+            "checklist_missing_sections": {"missing": ["identity"]},
+        }[tool_name],
     )
 
     out = mcp.get_report_mcp_context("example report", include_checklist=True)
@@ -28,13 +22,11 @@ def test_get_report_mcp_context_with_checklist(monkeypatch):
 def test_get_report_mcp_context_without_checklist(monkeypatch):
     monkeypatch.setattr(
         mcp.context,
-        "mcp_extract_vitals",
-        type("T", (), {"invoke": staticmethod(lambda args: {"heart_rate_bpm": 120})}),
-    )
-    monkeypatch.setattr(
-        mcp.context,
-        "mcp_triage_priority",
-        type("T", (), {"invoke": staticmethod(lambda args: {"priority": "critical"})}),
+        "call_mcp_tool_sync",
+        lambda tool_name, args: {
+            "extract_vitals": {"heart_rate_bpm": 120},
+            "triage_priority": {"priority": "critical"},
+        }[tool_name],
     )
 
     out = mcp.get_report_mcp_context("example report", include_checklist=False)
@@ -44,11 +36,36 @@ def test_get_report_mcp_context_without_checklist(monkeypatch):
     assert "missing_sections" not in out
 
 
-def test_vitals_coverage_score_all_slots():
-    from app.mcp import vitals_coverage_score
+def test_build_enriched_mcp_context_adds_scenario_and_guidelines(monkeypatch):
+    from types import SimpleNamespace
 
+    monkeypatch.setattr(
+        mcp,
+        "get_report_mcp_context",
+        lambda report_text, include_checklist=True: {"vitals": {"spo2_percent": 95}, "triage": {"priority": "ok"}},
+    )
+    monkeypatch.setattr(
+        mcp,
+        "scenario_context_mcp",
+        SimpleNamespace(
+            get_scenario=lambda _text: {"success": True, "scenario": {"detected_type": "default"}},
+        ),
+    )
+    monkeypatch.setattr(
+        mcp,
+        "medical_guidelines_mcp",
+        SimpleNamespace(get_context_string=lambda _text, k=3: "guidelines"),
+    )
+
+    out = mcp.build_enriched_mcp_context("report")
+
+    assert out["scenario_context"]["success"] is True
+    assert out["guidelines_context"] == "guidelines"
+
+
+def test_vitals_coverage_score_all_slots():
     assert (
-        vitals_coverage_score(
+        mcp.vitals_coverage_score(
             {
                 "heart_rate_bpm": 80,
                 "spo2_percent": 97,
@@ -63,7 +80,5 @@ def test_vitals_coverage_score_all_slots():
 
 
 def test_vitals_coverage_score_partial():
-    from app.mcp import vitals_coverage_score
-
-    assert vitals_coverage_score({"spo2_percent": 95}) == 20
-    assert vitals_coverage_score({}) == 0
+    assert mcp.vitals_coverage_score({"spo2_percent": 95}) == 20
+    assert mcp.vitals_coverage_score({}) == 0

@@ -45,16 +45,17 @@ Open the UI and submit a report to get **structured feedback** + a **recommended
 
 By default, the backend uses `llama3.1` (configurable via `OLLAMA_MODEL`). If you want a custom model, place the `Modelfile` in `ollama/Modelfile` and document it in the model README.
 
-## Prompt Tests (Promptfoo)
+## Prompt evaluation (Promptfoo)
 
-Prompt tests live in `promptfoo/` and use the `ollama:chat` provider.
+Contract tests for review and response prompts live in [`promptfoo/`](promptfoo/). See [`promptfoo/README.md`](promptfoo/README.md) for layout, assertions, and fixture scenarios.
 
 ```bash
 cd promptfoo
-# In restricted-network environments, skip Playwright download:
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install
 export OLLAMA_BASE_URL="http://127.0.0.1:11434"
-npm run test:prompts
+npm run test:prompts          # review + response suites
+npm run test:prompts:review   # review only
+npm run test:prompts:response # response only
 ```
 
 ## Unit Tests

@@ -3,8 +3,19 @@ import './App.css'
 import { chatDoctorTurn, clearHistory, createHistory, deleteHistory, finalizeSummary, listHistory } from './api'
 import type { AnalyzeResultV2 } from './types'
 import type { HistoryItem } from './history'
-import { defaultIndicatorsState, sections, type FieldDef, type IndicatorsState, type SectionDef } from './indicators/schema'
+import { defaultIndicatorsState, OBSERVATION_CHART_STATE_KEY, sections, type FieldDef, type IndicatorsState, type SectionDef } from './indicators/schema'
 import { indicatorsToReportText } from './indicators/render'
+import { ObservationChart } from './components/ObservationChart'
+import {
+  columnHasAnyValue,
+  createEmptyObservationChart,
+  getFirstColumnMissingFields,
+  isObservationChartReadyForSend,
+  parseObservationChart,
+  serializeObservationChart,
+  type ObservationChartData,
+} from './indicators/observationChart'
+import { clinicalTierFromHistory, completenessTierFromIndicators, vitalsQualityLevel } from './indicators/reportIndicators'
 
 type UiTab = 'form' | 'chat' | 'summary'
 
@@ -72,7 +83,20 @@ function toNumber(value: string | number | boolean | undefined): number | null {
   return parsed
 }
 
-function renderField(field: FieldDef, sectionId: string, indicators: IndicatorsState, setIndicators: Dispatch<SetStateAction<IndicatorsState>>) {
+function createInitialIndicators(): IndicatorsState {
+  return {
+    ...defaultIndicatorsState(),
+    [OBSERVATION_CHART_STATE_KEY]: serializeObservationChart(createEmptyObservationChart()),
+  }
+}
+
+function renderField(
+  field: FieldDef,
+  sectionId: string,
+  indicators: IndicatorsState,
+  setIndicators: Dispatch<SetStateAction<IndicatorsState>>,
+  disabled = false,
+) {
   const v = indicators[field.key]
   const id = `f_${sectionId}_${field.key}`
   if (field.type === 'textarea') {
@@ -84,6 +108,7 @@ function renderField(field: FieldDef, sectionId: string, indicators: IndicatorsS
           className="fieldInput textareaSmall"
           placeholder={field.placeholder}
           value={typeof v === 'string' ? v : String(v ?? '')}
+          disabled={disabled}
           onChange={(e) => setIndicators((p) => ({ ...p, [field.key]: e.target.value }))}
         />
       </label>
@@ -96,6 +121,7 @@ function renderField(field: FieldDef, sectionId: string, indicators: IndicatorsS
           id={id}
           type="checkbox"
           checked={Boolean(v)}
+          disabled={disabled}
           onChange={(e) => setIndicators((p) => ({ ...p, [field.key]: e.target.checked }))}
         />
         <span className="fieldLabel">{field.label}</span>
@@ -110,6 +136,7 @@ function renderField(field: FieldDef, sectionId: string, indicators: IndicatorsS
           id={id}
           className="fieldInput"
           value={typeof v === 'string' ? v : String(v ?? '')}
+          disabled={disabled}
           onChange={(e) => setIndicators((p) => ({ ...p, [field.key]: e.target.value }))}
         >
           {(field.options ?? []).map((o) => (
@@ -133,6 +160,7 @@ function renderField(field: FieldDef, sectionId: string, indicators: IndicatorsS
         type={field.type === 'number' ? 'number' : 'text'}
         placeholder={field.placeholder}
         value={typeof v === 'string' ? v : String(v ?? '')}
+        disabled={disabled}
         onChange={(e) => setIndicators((p) => ({ ...p, [field.key]: e.target.value }))}
       />
     </label>
@@ -153,7 +181,23 @@ function App() {
   const [pendingQuestions, setPendingQuestions] = useState<string[]>([])
   const [summarySaved, setSummarySaved] = useState(false)
   const [chatInput, setChatInput] = useState('')
-  const [indicators, setIndicators] = useState<IndicatorsState>(() => defaultIndicatorsState())
+  const [indicators, setIndicators] = useState<IndicatorsState>(() => createInitialIndicators())
+  const [formLockedToDoctor, setFormLockedToDoctor] = useState(false)
+  const [lockedObservationColumnIndexes, setLockedObservationColumnIndexes] = useState<number[]>([])
+  const [sendAttempted, setSendAttempted] = useState(false)
+
+  const observationChart = useMemo(
+    () => parseObservationChart(indicators[OBSERVATION_CHART_STATE_KEY]),
+    [indicators],
+  )
+  const missingObservationFields = useMemo(
+    () => getFirstColumnMissingFields(observationChart),
+    [observationChart],
+  )
+  const observationChartReady = useMemo(
+    () => isObservationChartReadyForSend(observationChart),
+    [observationChart],
+  )
 
   const completeness = useMemo(() => result?.review.completeness_score ?? null, [result])
   const hasAllRequiredVitals = useMemo(() => {
@@ -163,17 +207,29 @@ function App() {
     const sys = toNumber(indicators.bp_systolic)
     const dia = toNumber(indicators.bp_diastolic)
     const temp = toNumber(indicators.temp_mouth_c) ?? toNumber(indicators.temp_alt_c)
-    return [hr, rr, spo2, sys, dia, temp].every((v) => v !== null)
-  }, [indicators])
+    if ([hr, rr, spo2, sys, dia, temp].every((v) => v !== null)) return true
+
+    const col = observationChart.columns[0] ?? {}
+    const chartHr = toNumber(col.heart_rate)
+    const chartRr = toNumber(col.breathing_frequency)
+    const chartSpo2 = toNumber(col.spo2)
+    const bpMatch = String(col.blood_pressure ?? '').trim().match(/(\d+)\s*\/\s*(\d+)/)
+    const chartSys = bpMatch ? Number(bpMatch[1]) : null
+    const chartDia = bpMatch ? Number(bpMatch[2]) : null
+    const chartTemp = toNumber(col.temperature)
+    return [chartHr, chartRr, chartSpo2, chartSys, chartDia, chartTemp].every((v) => v !== null)
+  }, [indicators, observationChart])
 
   const vitalsQuality = useMemo((): { level: VitalsQuality; label: string; feedback: string[] } => {
-    if (!hasAllRequiredVitals) {
+    const level = vitalsQualityLevel(indicators)
+    if (level === 'unknown') {
       return {
         level: 'unknown',
         label: 'Incomplete',
         feedback: ['Summary is locked until all vitals are provided (HR, RR, SpO2, BP systolic/diastolic, temperature).'],
       }
     }
+
     const hr = toNumber(indicators.pulse_bpm) ?? 0
     const rr = toNumber(indicators.breathing_frequency) ?? 0
     const spo2 = toNumber(indicators.spo2_percent) ?? 0
@@ -181,59 +237,31 @@ function App() {
     const dia = toNumber(indicators.bp_diastolic) ?? 0
     const temp = (toNumber(indicators.temp_mouth_c) ?? toNumber(indicators.temp_alt_c)) ?? 0
 
-    let severityPoints = 0
     const feedback: string[] = []
 
-    if (hr < 50 || hr > 120) {
-      severityPoints += 2
-      feedback.push(`Heart rate is concerning (${hr} bpm).`)
-    } else if (hr < 50 || hr > 80) {
-      severityPoints += 1
-      feedback.push(`Heart rate is outside typical range (${hr} bpm).`)
-    }
+    if (hr < 50 || hr > 120) feedback.push(`Heart rate is concerning (${hr} bpm).`)
+    else if (hr < 50 || hr > 80) feedback.push(`Heart rate is outside typical range (${hr} bpm).`)
 
-    if (rr < 10 || rr > 25) {
-      severityPoints += 2
-      feedback.push(`Respiratory rate is concerning (${rr}/min).`)
-    } else if (rr < 12 || rr > 20) {
-      severityPoints += 1
-      feedback.push(`Respiratory rate is outside typical range (${rr}/min).`)
-    }
+    if (rr < 10 || rr > 25) feedback.push(`Respiratory rate is concerning (${rr}/min).`)
+    else if (rr < 12 || rr > 20) feedback.push(`Respiratory rate is outside typical range (${rr}/min).`)
 
-    if (spo2 <= 90) {
-      severityPoints += 3
-      feedback.push(`SpO2 is critical (${spo2}%).`)
-    } else if (spo2 < 92) {
-      severityPoints += 2
-      feedback.push(`SpO2 is low (${spo2}%).`)
-    } else if (spo2 < 95) {
-      severityPoints += 1
-      feedback.push(`SpO2 is mildly below target (${spo2}%).`)
-    }
+    if (spo2 <= 90) feedback.push(`SpO2 is critical (${spo2}%).`)
+    else if (spo2 < 92) feedback.push(`SpO2 is low (${spo2}%).`)
+    else if (spo2 < 95) feedback.push(`SpO2 is mildly below target (${spo2}%).`)
 
-    if (sys < 90) {
-      severityPoints += 2
-      feedback.push(`Systolic blood pressure suggests shock risk (${sys} mmHg).`)
-    } else if (sys > 140 || dia > 90 || dia < 60) {
-      severityPoints += 1
-      feedback.push(`Blood pressure is outside typical range (${sys}/${dia} mmHg).`)
-    }
+    if (sys < 90) feedback.push(`Systolic blood pressure suggests shock risk (${sys} mmHg).`)
+    else if (sys > 140 || dia > 90 || dia < 60) feedback.push(`Blood pressure is outside typical range (${sys}/${dia} mmHg).`)
 
-    if (temp < 35 || temp >= 39) {
-      severityPoints += 2
-      feedback.push(`Temperature is high risk (${temp}°C).`)
-    } else if (temp < 36 || temp >= 38) {
-      severityPoints += 1
-      feedback.push(`Temperature is outside typical range (${temp}°C).`)
-    }
+    if (temp < 35 || temp >= 39) feedback.push(`Temperature is high risk (${temp}°C).`)
+    else if (temp < 36 || temp >= 38) feedback.push(`Temperature is outside typical range (${temp}°C).`)
 
-    if (severityPoints === 0) {
+    if (level === 'green') {
       return { level: 'green', label: 'Good', feedback: ['Vitals are currently stable and within typical ranges.'] }
     }
-    if (severityPoints <= 2) return { level: 'yellow', label: 'Watch', feedback }
-    if (severityPoints <= 4) return { level: 'orange', label: 'Concerning', feedback }
+    if (level === 'yellow') return { level: 'yellow', label: 'Watch', feedback }
+    if (level === 'orange') return { level: 'orange', label: 'Concerning', feedback }
     return { level: 'red', label: 'Critical', feedback }
-  }, [hasAllRequiredVitals, indicators])
+  }, [indicators])
 
   const summaryReady = useMemo(
     () => Boolean(result) && pendingQuestions.length === 0 && hasAllRequiredVitals,
@@ -249,6 +277,7 @@ function App() {
 
   const canAskDoctor = useMemo(() => {
     if (busy) return false
+    if (!observationChartReady) return false
     const name = String(indicators.patient_name ?? '').trim()
     const problem = String(indicators.problem_description ?? '').trim()
     const anyVital =
@@ -257,7 +286,21 @@ function App() {
       String(indicators.bp_systolic ?? '').trim() !== '' ||
       String(indicators.breathing_frequency ?? '').trim() !== ''
     return (name.length >= 2 && problem.length >= 10) || anyVital
-  }, [busy, indicators])
+  }, [busy, indicators, observationChartReady])
+
+  const showChatTab = formLockedToDoctor || chatMessages.length > 0
+  const showSummaryTab =
+    Boolean(result) ||
+    summarySaved ||
+    Boolean(selectedHistoryId) ||
+    (showChatTab && chatMessages.length > 0 && (canFinalizeNow || pendingQuestions.length === 0))
+
+  const updateObservationChart = (chart: ObservationChartData) => {
+    setIndicators((prev) => ({
+      ...prev,
+      [OBSERVATION_CHART_STATE_KEY]: serializeObservationChart(chart),
+    }))
+  }
 
   const activeStepIndex = useMemo(() => FORM_STEPS.findIndex((step) => step.id === activeStepId), [activeStepId])
   const currentStep = activeStepIndex >= 0 ? FORM_STEPS[activeStepIndex] : FORM_STEPS[0]
@@ -311,6 +354,11 @@ function App() {
     return () => window.removeEventListener('keydown', onEsc)
   }, [])
 
+  useEffect(() => {
+    if (activeTab === 'chat' && !showChatTab) setActiveTab('form')
+    if (activeTab === 'summary' && !showSummaryTab) setActiveTab(showChatTab ? 'chat' : 'form')
+  }, [activeTab, showChatTab, showSummaryTab])
+
   const handleClear = () => {
     setResult(null)
     setError(null)
@@ -319,7 +367,10 @@ function App() {
     setPendingQuestions([])
     setSummarySaved(false)
     setChatInput('')
-    setIndicators(defaultIndicatorsState())
+    setFormLockedToDoctor(false)
+    setLockedObservationColumnIndexes([])
+    setSendAttempted(false)
+    setIndicators(createInitialIndicators())
     setActiveTab('form')
     setActiveStepId(FORM_STEPS[0].id)
   }
@@ -362,17 +413,32 @@ function App() {
     setSummarySaved(true)
   }
 
-  const finalizeCase = async (messages: ChatMessage[]) => {
-    if (summarySaved || !canFinalizeNow) return
+  const finalizeCase = async (messages: ChatMessage[], options?: { switchToSummary?: boolean }) => {
+    if (!canFinalizeNow) return
     const reportText = buildReportText(messages)
     const res = await finalizeSummary({ session_id: sessionId, report_text: reportText, locale: 'en-UK' })
     setResult(res)
-    await saveSummaryToHistory(res, messages)
-    setActiveTab('summary')
+    if (!summarySaved) {
+      await saveSummaryToHistory(res, messages)
+    }
+    if (options?.switchToSummary !== false) {
+      setActiveTab('summary')
+    }
   }
 
   const askDoctor = async (userMessage?: string) => {
-    if (!canAskDoctor) return
+    if (busy) return
+    if (!canAskDoctor) {
+      setSendAttempted(true)
+      if (!observationChartReady) {
+        setError(null)
+        setActiveStepId('actions')
+        setActiveTab('form')
+        return
+      }
+      setError('Add patient name and problem description, or at least one ABCDE vital, before sending to the AI doctor.')
+      return
+    }
     setActiveTab('chat')
     setIsMenuOpen(false)
     setBusy(true)
@@ -392,6 +458,14 @@ function App() {
         locale: 'en-UK',
         user_message: trimmed,
       })
+      if (!formLockedToDoctor) {
+        setFormLockedToDoctor(true)
+        setLockedObservationColumnIndexes(
+          observationChart.columns
+            .map((column, index) => (columnHasAnyValue(column) ? index : -1))
+            .filter((index) => index >= 0),
+        )
+      }
       setPendingQuestions(turn.pending_questions)
       const questionsToShow = turn.pending_questions.slice(0, 3)
       const doctorMessage: ChatMessage = {
@@ -404,7 +478,7 @@ function App() {
       setChatMessages(allMessages)
       const readyNow = turn.can_finalize_summary && hasAllRequiredVitals
       if (readyNow) {
-        await finalizeCase(allMessages)
+        await finalizeCase(allMessages, { switchToSummary: !result })
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
@@ -412,6 +486,8 @@ function App() {
       setBusy(false)
     }
   }
+
+  const sidebarPatientName = String(indicators.patient_name ?? '').trim()
 
   return (
     <div className="appShell">
@@ -425,9 +501,11 @@ function App() {
           </div>
 
           <div className="brand">
-            <div className="brandAvatar">{String(indicators.patient_name || 'P').trim().slice(0, 1).toUpperCase()}</div>
+            <div className="brandAvatar">
+              {sidebarPatientName ? sidebarPatientName.slice(0, 1).toUpperCase() : '?'}
+            </div>
             <div className="brandCopy">
-              <div className="brandName">{patientNameFromIndicators(indicators) ?? 'Draft patient'}</div>
+              <div className="brandName">{sidebarPatientName || 'New report'}</div>
               <div className="brandSub">{new Date().toLocaleDateString()}</div>
             </div>
           </div>
@@ -443,38 +521,6 @@ function App() {
             New report
           </button>
 
-          <div className="menuQuickLinks">
-            <button
-              type="button"
-              className={`quickLink ${activeTab === 'form' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab('form')
-                setIsMenuOpen(false)
-              }}
-            >
-              Form
-            </button>
-            <button
-              type="button"
-              className={`quickLink ${activeTab === 'chat' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab('chat')
-                setIsMenuOpen(false)
-              }}
-            >
-              Chat
-            </button>
-            <button
-              type="button"
-              className={`quickLink ${activeTab === 'summary' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab('summary')
-                setIsMenuOpen(false)
-              }}
-            >
-              Summary
-            </button>
-          </div>
         </div>
 
         <div className="sidebarSectionTitle">History</div>
@@ -483,9 +529,10 @@ function App() {
         ) : (
           <div className="historyList">
             {history.map((h) => {
-              const score = h.result.review.completeness_score
               const when = new Date(h.createdAt).toLocaleString()
               const active = h.id === selectedHistoryId
+              const completenessTier = completenessTierFromIndicators(h.indicators)
+              const clinicalTier = clinicalTierFromHistory(h)
               return (
                 <button
                   key={h.id}
@@ -497,7 +544,16 @@ function App() {
                     setChatMessages([])
                     setPendingQuestions([])
                     setSummarySaved(true)
-                    if (h.indicators) setIndicators(h.indicators)
+                    setFormLockedToDoctor(true)
+                    if (h.indicators) {
+                      setIndicators(h.indicators)
+                      const chart = parseObservationChart(h.indicators[OBSERVATION_CHART_STATE_KEY])
+                      setLockedObservationColumnIndexes(
+                        chart.columns
+                          .map((column, index) => (columnHasAnyValue(column) ? index : -1))
+                          .filter((index) => index >= 0),
+                      )
+                    }
                     setActiveTab('summary')
                     setIsMenuOpen(false)
                   }}
@@ -505,7 +561,14 @@ function App() {
                 >
                   <div className="historyTop">
                     <div className="historyTitle">{historyTitle(h)}</div>
-                    <div className={`historyScore s-${scoreTier(score)}`}>{score}</div>
+                    <div className="historyIndicators">
+                      <div className={`historyBadge v-${clinicalTier}`} title="Clinical situation">
+                        V
+                      </div>
+                      <div className={`historyBadge c-${completenessTier}`} title="Report completeness">
+                        C
+                      </div>
+                    </div>
                   </div>
                   <div className="historyMeta">{when}</div>
                   <button
@@ -578,10 +641,6 @@ function App() {
               clinical summary.
             </p>
           </div>
-          <div className="meta">
-            <div className="metaLabel">Session</div>
-            <div className="metaValue">{sessionId}</div>
-          </div>
         </header>
 
         <main className="workspace card">
@@ -589,39 +648,49 @@ function App() {
             <button type="button" className={`tabBtn ${activeTab === 'form' ? 'active' : ''}`} onClick={() => setActiveTab('form')}>
               Form
             </button>
-            <button type="button" className={`tabBtn ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
-              Chat
-            </button>
-            <button
-              type="button"
-              className={`tabBtn ${activeTab === 'summary' ? 'active' : ''}`}
-              onClick={async () => {
-                if (!result && canFinalizeNow && chatMessages.length > 0) {
-                  setBusy(true)
-                  setError(null)
-                  try {
-                    await finalizeCase(chatMessages)
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : 'Unknown error')
-                  } finally {
-                    setBusy(false)
+            {showChatTab && (
+              <button type="button" className={`tabBtn ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
+                Chat
+              </button>
+            )}
+            {showSummaryTab && (
+              <button
+                type="button"
+                className={`tabBtn ${activeTab === 'summary' ? 'active' : ''}`}
+                onClick={async () => {
+                  if (!result && canFinalizeNow && chatMessages.length > 0) {
+                    setBusy(true)
+                    setError(null)
+                    try {
+                      await finalizeCase(chatMessages)
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Unknown error')
+                    } finally {
+                      setBusy(false)
+                    }
+                    return
                   }
-                  return
-                }
-                if (summaryReady || summarySaved || Boolean(selectedHistoryId)) {
-                  setActiveTab('summary')
-                  return
-                }
-                setError(summaryBlockReason ?? 'Summary is not ready yet.')
-              }}
-              disabled={busy}
-            >
-              Summary
-            </button>
+                  if (summaryReady || summarySaved || Boolean(selectedHistoryId)) {
+                    setActiveTab('summary')
+                    return
+                  }
+                  setError(summaryBlockReason ?? 'Summary is not ready yet.')
+                }}
+                disabled={busy}
+              >
+                Summary
+              </button>
+            )}
           </div>
 
           {activeTab === 'form' && (
             <section className="tabPanel">
+              {formLockedToDoctor && (
+                <div className="formLockedNotice" role="status">
+                  Form locked after first send to the AI doctor. Only the observation chart remains editable — use the Chat
+                  tab to add new columns while continuing the conversation.
+                </div>
+              )}
               <div className="stepper">
                 {FORM_STEPS.map((step, index) => (
                   <button
@@ -647,7 +716,21 @@ function App() {
                     <div key={sec.id} className="formSection">
                       {currentStepSections.length > 1 && <div className="nestedSectionTitle">{sec.title}</div>}
                       {sec.description && <div className="formSectionDesc">{sec.description}</div>}
-                      <div className="fields">{sec.fields.map((f) => renderField(f, sec.id, indicators, setIndicators))}</div>
+                      {sec.id === 'observation' ? (
+                        <ObservationChart
+                          chart={observationChart}
+                          onChange={updateObservationChart}
+                          lockedColumnIndexes={lockedObservationColumnIndexes}
+                          missingMandatoryLabels={missingObservationFields}
+                          showValidation={sendAttempted && !observationChartReady}
+                        />
+                      ) : (
+                        <div className="fields">
+                          {sec.fields.map((f) =>
+                            renderField(f, sec.id, indicators, setIndicators, formLockedToDoctor),
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -669,7 +752,11 @@ function App() {
                   >
                     Next section →
                   </button>
-                  <button className="button" onClick={() => void askDoctor()} disabled={!canAskDoctor}>
+                  <button
+                    className={`button ${!canAskDoctor ? 'buttonAttention' : ''}`}
+                    onClick={() => void askDoctor()}
+                    disabled={busy}
+                  >
                     {busy ? 'Analyzing…' : 'Send to AI doctor'}
                   </button>
                 </div>
@@ -679,14 +766,35 @@ function App() {
 
           {activeTab === 'chat' && (
             <section className="tabPanel chatPanel">
+              {formLockedToDoctor && (
+                <div className="formSectionCard chatObservationCard">
+                  <div className="formSectionHeader">
+                    <div className="formSectionTitle">Observation chart</div>
+                    <div className="formSectionDesc">
+                      The rest of the form is locked. Add new patient progress in the next available column while chatting
+                      with the AI doctor.
+                    </div>
+                  </div>
+                  <ObservationChart
+                    chart={observationChart}
+                    onChange={updateObservationChart}
+                    lockedColumnIndexes={lockedObservationColumnIndexes}
+                    missingMandatoryLabels={missingObservationFields}
+                    showValidation={false}
+                  />
+                </div>
+              )}
               <div className="chatStream">
-                {(pendingQuestions.length > 0 || !hasAllRequiredVitals) && (
+                {!hasAllRequiredVitals && (
                   <div className="chatGateNotice">
                     <div className="chatGateTitle">Summary locked</div>
-                    {!hasAllRequiredVitals && <div>Complete all required vitals before the final summary can be generated.</div>}
-                    {pendingQuestions.length > 0 && (
-                      <div>{pendingQuestions.length} follow-up question(s) still need to be answered in chat.</div>
-                    )}
+                    <div>Complete all required vitals in the form or observation chart before the clinical summary can be generated.</div>
+                  </div>
+                )}
+                {hasAllRequiredVitals && pendingQuestions.length > 0 && (
+                  <div className="chatGateNotice">
+                    <div className="chatGateTitle">Clinical question pending</div>
+                    <div>Answer the follow-up question below in chat, then open Summary.</div>
                   </div>
                 )}
                 {chatMessages.length === 0 ? (
@@ -835,8 +943,51 @@ function App() {
                       )}
                     </div>
                     <div className="summaryBody">
-                      <div className="subTitle">Recommended next step</div>
-                      <div className="message">{result.response.next_step_message}</div>
+                      {(() => {
+                        const immediateActions =
+                          result.response.immediate_actions?.filter((line) => line.trim()) ??
+                          (result.response.next_step_message?.trim()
+                            ? [result.response.next_step_message.trim()]
+                            : [])
+                        const monitoringParameters =
+                          result.response.monitoring_parameters?.filter((line) => line.trim()) ?? []
+                        const escalationCriteria =
+                          result.response.escalation_criteria?.filter((line) => line.trim()) ?? []
+                        return (
+                          <>
+                            {immediateActions.length > 0 && (
+                              <>
+                                <div className="subTitle">Immediate actions</div>
+                                <ol className="numberedList">
+                                  {immediateActions.map((action, idx) => (
+                                    <li key={idx}>{action}</li>
+                                  ))}
+                                </ol>
+                              </>
+                            )}
+                            {monitoringParameters.length > 0 && (
+                              <>
+                                <div className="subTitle">Monitoring parameters</div>
+                                <ul className="bullets">
+                                  {monitoringParameters.map((line, idx) => (
+                                    <li key={idx}>{line}</li>
+                                  ))}
+                                </ul>
+                              </>
+                            )}
+                            {escalationCriteria.length > 0 && (
+                              <>
+                                <div className="subTitle">Escalation criteria</div>
+                                <ul className="bullets">
+                                  {escalationCriteria.map((line, idx) => (
+                                    <li key={idx}>{line}</li>
+                                  ))}
+                                </ul>
+                              </>
+                            )}
+                          </>
+                        )
+                      })()}
                       {result.response.rationale_bullets.length > 0 && (
                         <>
                           <div className="subTitle">Rationale</div>

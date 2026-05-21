@@ -1,0 +1,15 @@
+{
+  "extracted": {},
+  "deficiencies": [
+    {
+      "area": "C",
+      "issue": "No pulse, blood pressure, respiratory rate, SpO₂, or temperature documented.",
+      "severity": "high",
+      "suggestion": "Complete a full vital-sign set and record AVPU or GCS."
+    }
+  ],
+  "safety_flags": [
+    "Cardiovascular and respiratory stability cannot be confirmed without documented vitals."
+  ],
+  "completeness_score": 52
+}

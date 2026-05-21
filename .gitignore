@@ -1,7 +1,7 @@
 .DS_Store
 
 # Python
-backend/.venv/
+.venv/
 **/__pycache__/
 *.pyc
 backend/.pytest_cache/
