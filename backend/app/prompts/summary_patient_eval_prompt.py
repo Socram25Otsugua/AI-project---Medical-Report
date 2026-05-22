@@ -1,4 +1,4 @@
-PATIENT_EVAL_SYSTEM_PROMPT = """\
+SUMMARY_PATIENT_EVAL_SYSTEM_PROMPT = """\
 You are an offline clinical training assistant.
 Given a participant's Radio Medical Record report, produce a patient evaluation for the simulation instructor.
 

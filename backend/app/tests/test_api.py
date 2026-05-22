@@ -13,35 +13,31 @@ def test_health():
 def test_analyze_endpoint_mocked(monkeypatch):
     client = TestClient(app)
 
-    def _fake_review(*args, **kwargs):
+    def _fake_summary(*args, **kwargs):
         return {
-            "extracted": {"patient": "x"},
-            "deficiencies": [],
-            "safety_flags": [],
-            "completeness_score": 80,
-            "vitals_score": 40,
+            "review": {
+                "extracted": {"patient": "x"},
+                "deficiencies": [],
+                "safety_flags": [],
+                "completeness_score": 80,
+                "vitals_score": 40,
+            },
+            "response": {
+                "immediate_actions": ["Do ABCDE."],
+                "monitoring_parameters": ["Recheck SpO2 every 15 minutes."],
+                "escalation_criteria": ["Call again if SpO2 drops below 92%."],
+                "rationale_bullets": ["Because."],
+                "questions_for_participants": ["What is the SpO2?"],
+            },
+            "patient_evaluation": {
+                "status": "unknown",
+                "summary": "Insufficient data to assess.",
+                "suspected_problems": [],
+                "red_flags": [],
+            },
         }
 
-    def _fake_respond(*args, **kwargs):
-        return {
-            "immediate_actions": ["Do ABCDE."],
-            "monitoring_parameters": ["Recheck SpO2 every 15 minutes."],
-            "escalation_criteria": ["Call again if SpO2 drops below 92%."],
-            "rationale_bullets": ["Because."],
-            "questions_for_participants": ["What is the SpO2?"],
-        }
-
-    def _fake_eval(*args, **kwargs):
-        return {
-            "status": "unknown",
-            "summary": "Insufficient data to assess.",
-            "suspected_problems": [],
-            "red_flags": [],
-        }
-
-    monkeypatch.setattr("app.routers.reports.review_report", _fake_review)
-    monkeypatch.setattr("app.routers.reports.generate_next_step", _fake_respond)
-    monkeypatch.setattr("app.routers.reports.evaluate_patient", _fake_eval)
+    monkeypatch.setattr("app.routers.reports.build_clinical_summary", _fake_summary)
 
     r = client.post(
         "/api/v1/reports/analyze",
@@ -66,7 +62,7 @@ def test_review_endpoint_mocked(monkeypatch):
             "vitals_score": 60,
         }
 
-    monkeypatch.setattr("app.routers.reports.review_report", _fake_review)
+    monkeypatch.setattr("app.routers.reports.analyze_form", _fake_review)
 
     r = client.post(
         "/api/v1/reports/review",
@@ -98,8 +94,8 @@ def test_respond_endpoint_mocked(monkeypatch):
             "questions_for_participants": ["question"],
         }
 
-    monkeypatch.setattr("app.routers.reports.review_report", _fake_review)
-    monkeypatch.setattr("app.routers.reports.generate_next_step", _fake_respond)
+    monkeypatch.setattr("app.routers.reports.analyze_form", _fake_review)
+    monkeypatch.setattr("app.routers.reports.generate_summary_actions", _fake_respond)
 
     r = client.post(
         "/api/v1/reports/respond",

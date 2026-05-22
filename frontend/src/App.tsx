@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import './App.css'
-import { chatDoctorTurn, clearHistory, createHistory, deleteHistory, finalizeSummary, listHistory } from './api'
+import { chatDoctorTurn, createHistory, deleteHistory, finalizeSummary, listHistory } from './api'
 import type { AnalyzeResultV2 } from './types'
 import type { HistoryItem } from './history'
 import { defaultIndicatorsState, OBSERVATION_CHART_STATE_KEY, sections, type FieldDef, type IndicatorsState, type SectionDef } from './indicators/schema'
 import { indicatorsToReportText } from './indicators/render'
 import { ObservationChart } from './components/ObservationChart'
+import { ClinicalSummary } from './components/ClinicalSummary'
 import {
   columnHasAnyValue,
   createEmptyObservationChart,
@@ -31,6 +32,7 @@ type VitalsQuality = 'green' | 'yellow' | 'orange' | 'red' | 'unknown'
 type FormStep = {
   id: string
   title: string
+  shortLabel: string
   description: string
   sectionIds: string[]
 }
@@ -38,28 +40,64 @@ type FormStep = {
 const FORM_STEPS: FormStep[] = [
   {
     id: 'patient',
-    title: 'Patient details',
-    description: 'Identity, contacts, allergies and medicines',
+    title: 'Patient & vessel',
+    shortLabel: 'P — Patient',
+    description: 'Identity, vessel contact details, allergies and medicines',
     sectionIds: ['identity', 'ship', 'allergies_meds'],
   },
-  { id: 'airway', title: 'A — Airway', description: 'Airway and immediate support', sectionIds: ['airway'] },
-  { id: 'breathing', title: 'B — Breathing', description: 'Respiratory observation', sectionIds: ['breathing'] },
+  {
+    id: 'airway',
+    title: 'A — Airway',
+    shortLabel: 'A — Airway',
+    description: 'Airway and immediate support',
+    sectionIds: ['airway'],
+  },
+  {
+    id: 'breathing',
+    title: 'B — Breathing',
+    shortLabel: 'B — Breathing',
+    description: 'Respiratory observation',
+    sectionIds: ['breathing'],
+  },
   {
     id: 'circulation',
     title: 'C — Circulation',
+    shortLabel: 'C — Circulation',
     description: 'Perfusion and hemodynamics',
     sectionIds: ['circulation'],
   },
-  { id: 'disability', title: 'D — Disability', description: 'Neurologic status', sectionIds: ['disability'] },
-  { id: 'exposure', title: 'E — Exposure', description: 'Full-body and temperature findings', sectionIds: ['exposure'] },
-  { id: 'problem', title: 'Problem', description: 'Chief complaint and context', sectionIds: ['problem'] },
-  { id: 'actions', title: 'Actions', description: 'Treatments and timeline', sectionIds: ['actions', 'observation'] },
+  {
+    id: 'disability',
+    title: 'D — Disability',
+    shortLabel: 'D — Disability',
+    description: 'Neurologic status',
+    sectionIds: ['disability'],
+  },
+  {
+    id: 'exposure',
+    title: 'E — Exposure',
+    shortLabel: 'E — Exposure',
+    description: 'Full-body and temperature findings',
+    sectionIds: ['exposure'],
+  },
+  {
+    id: 'problem',
+    title: 'Problem',
+    shortLabel: 'Problem',
+    description: 'Chief complaint and context',
+    sectionIds: ['problem'],
+  },
+  {
+    id: 'actions',
+    title: 'Actions',
+    shortLabel: 'Actions',
+    description: 'Treatments and timeline',
+    sectionIds: ['actions', 'observation'],
+  },
 ]
 
-function scoreTier(score: number): 'g' | 'y' | 'r' {
-  if (score >= 85) return 'g'
-  if (score >= 60) return 'y'
-  return 'r'
+function fieldFromSections(sectionId: string, key: string): FieldDef | undefined {
+  return sections.find((section) => section.id === sectionId)?.fields.find((field) => field.key === key)
 }
 
 function patientNameFromIndicators(indicators?: IndicatorsState): string | null {
@@ -96,13 +134,24 @@ function renderField(
   indicators: IndicatorsState,
   setIndicators: Dispatch<SetStateAction<IndicatorsState>>,
   disabled = false,
+  options?: { labelOverride?: string; hint?: string },
 ) {
   const v = indicators[field.key]
   const id = `f_${sectionId}_${field.key}`
+  const label = options?.labelOverride ?? field.label
+  const inputWrap = (control: ReactNode) =>
+    options?.hint ? (
+      <div className="fieldWithHint">
+        {control}
+        <span className="fieldHint">{options.hint}</span>
+      </div>
+    ) : (
+      control
+    )
   if (field.type === 'textarea') {
     return (
       <label key={field.key} className="field">
-        <span className="fieldLabel">{field.label}</span>
+        <span className="fieldLabel">{label}</span>
         <textarea
           id={id}
           className="fieldInput textareaSmall"
@@ -124,14 +173,14 @@ function renderField(
           disabled={disabled}
           onChange={(e) => setIndicators((p) => ({ ...p, [field.key]: e.target.checked }))}
         />
-        <span className="fieldLabel">{field.label}</span>
+        <span className="fieldLabel">{label}</span>
       </label>
     )
   }
   if (field.type === 'select') {
     return (
       <label key={field.key} className="field">
-        <span className="fieldLabel">{field.label}</span>
+        <span className="fieldLabel">{label}</span>
         <select
           id={id}
           className="fieldInput"
@@ -151,18 +200,20 @@ function renderField(
   return (
     <label key={field.key} className="field">
       <span className="fieldLabel">
-        {field.label}
+        {label}
         {field.unit ? <span className="unit">{field.unit}</span> : null}
       </span>
-      <input
-        id={id}
-        className="fieldInput"
-        type={field.type === 'number' ? 'number' : 'text'}
-        placeholder={field.placeholder}
-        value={typeof v === 'string' ? v : String(v ?? '')}
-        disabled={disabled}
-        onChange={(e) => setIndicators((p) => ({ ...p, [field.key]: e.target.value }))}
-      />
+      {inputWrap(
+        <input
+          id={id}
+          className="fieldInput"
+          type={field.type === 'number' ? 'number' : 'text'}
+          placeholder={field.placeholder}
+          value={typeof v === 'string' ? v : String(v ?? '')}
+          disabled={disabled}
+          onChange={(e) => setIndicators((p) => ({ ...p, [field.key]: e.target.value }))}
+        />,
+      )}
     </label>
   )
 }
@@ -185,6 +236,9 @@ function App() {
   const [formLockedToDoctor, setFormLockedToDoctor] = useState(false)
   const [lockedObservationColumnIndexes, setLockedObservationColumnIndexes] = useState<number[]>([])
   const [sendAttempted, setSendAttempted] = useState(false)
+  const [historySearch, setHistorySearch] = useState('')
+  const [lastAutosaveAt, setLastAutosaveAt] = useState<number | null>(null)
+  const [autosaveTick, setAutosaveTick] = useState(0)
 
   const observationChart = useMemo(
     () => parseObservationChart(indicators[OBSERVATION_CHART_STATE_KEY]),
@@ -199,7 +253,6 @@ function App() {
     [observationChart],
   )
 
-  const completeness = useMemo(() => result?.review.completeness_score ?? null, [result])
   const hasAllRequiredVitals = useMemo(() => {
     const hr = toNumber(indicators.pulse_bpm)
     const rr = toNumber(indicators.breathing_frequency)
@@ -302,8 +355,27 @@ function App() {
     }))
   }
 
+  const filteredHistory = useMemo(() => {
+    const query = historySearch.trim().toLowerCase()
+    if (!query) return history
+    return history.filter((item) => historyTitle(item).toLowerCase().includes(query))
+  }, [history, historySearch])
+
+  const autosaveLabel = useMemo(() => {
+    if (!lastAutosaveAt) return 'Draft autosaved · just now'
+    const seconds = Math.max(0, Math.floor((Date.now() - lastAutosaveAt) / 1000))
+    if (seconds < 5) return 'Draft autosaved · just now'
+    if (seconds < 60) return `Draft autosaved · ${seconds}s ago`
+    const minutes = Math.floor(seconds / 60)
+    return `Draft autosaved · ${minutes}m ago`
+  }, [lastAutosaveAt, autosaveTick])
+
   const activeStepIndex = useMemo(() => FORM_STEPS.findIndex((step) => step.id === activeStepId), [activeStepId])
   const currentStep = activeStepIndex >= 0 ? FORM_STEPS[activeStepIndex] : FORM_STEPS[0]
+  const progressPercent = useMemo(
+    () => Math.round(((activeStepIndex + 1) / FORM_STEPS.length) * 100),
+    [activeStepIndex],
+  )
   const currentStepSections = useMemo<SectionDef[]>(
     () =>
       currentStep.sectionIds
@@ -312,28 +384,18 @@ function App() {
     [currentStep],
   )
 
-  const patientFacts = useMemo(
-    () => [
-      { label: 'Name', value: fieldValue(indicators.patient_name) || 'Not provided' },
-      { label: 'Birthdate / CPR', value: fieldValue(indicators.birthdate_cpr) || 'Not provided' },
-      { label: 'Gender', value: fieldValue(indicators.gender) || 'Not provided' },
-      { label: 'Nationality', value: fieldValue(indicators.nationality) || 'Not provided' },
-      { label: 'Ship', value: fieldValue(indicators.ship_name) || 'Not provided' },
-      { label: 'Position', value: fieldValue(indicators.coordinates) || 'Not provided' },
-    ],
-    [indicators],
-  )
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      localStorage.setItem(`draft_${sessionId}`, JSON.stringify(indicators))
+      setLastAutosaveAt(Date.now())
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [indicators, sessionId])
 
-  const vitalsFacts = useMemo(
-    () => [
-      { label: 'Heart rate', value: fieldValue(indicators.pulse_bpm), unit: 'bpm' },
-      { label: 'SpO2', value: fieldValue(indicators.spo2_percent), unit: '%' },
-      { label: 'Respiratory rate', value: fieldValue(indicators.breathing_frequency), unit: '/min' },
-      { label: 'Blood pressure', value: `${fieldValue(indicators.bp_systolic)}/${fieldValue(indicators.bp_diastolic)}`, unit: 'mmHg' },
-      { label: 'Temperature', value: fieldValue(indicators.temp_mouth_c) || fieldValue(indicators.temp_alt_c), unit: '°C' },
-    ],
-    [indicators],
-  )
+  useEffect(() => {
+    const timer = window.setInterval(() => setAutosaveTick((value) => value + 1), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     ;(async () => {
@@ -355,9 +417,9 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (activeTab === 'chat' && !showChatTab) setActiveTab('form')
-    if (activeTab === 'summary' && !showSummaryTab) setActiveTab(showChatTab ? 'chat' : 'form')
-  }, [activeTab, showChatTab, showSummaryTab])
+    if (activeTab === 'chat') setActiveTab('form')
+    if (activeTab === 'summary' && !showSummaryTab) setActiveTab('form')
+  }, [activeTab, showSummaryTab])
 
   const handleClear = () => {
     setResult(null)
@@ -439,7 +501,7 @@ function App() {
       setError('Add patient name and problem description, or at least one ABCDE vital, before sending to the AI doctor.')
       return
     }
-    setActiveTab('chat')
+    setActiveTab('form')
     setIsMenuOpen(false)
     setBusy(true)
     setError(null)
@@ -460,14 +522,15 @@ function App() {
       })
       if (!formLockedToDoctor) {
         setFormLockedToDoctor(true)
+        setActiveStepId('actions')
         setLockedObservationColumnIndexes(
           observationChart.columns
             .map((column, index) => (columnHasAnyValue(column) ? index : -1))
             .filter((index) => index >= 0),
         )
       }
-      setPendingQuestions(turn.pending_questions)
-      const questionsToShow = turn.pending_questions.slice(0, 3)
+      setPendingQuestions(turn.pending_questions ?? [])
+      const questionsToShow = (turn.pending_questions ?? []).slice(0, 3)
       const doctorMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -487,48 +550,292 @@ function App() {
     }
   }
 
-  const sidebarPatientName = String(indicators.patient_name ?? '').trim()
+  const openSummaryView = async () => {
+    if (!result && canFinalizeNow && chatMessages.length > 0) {
+      setBusy(true)
+      setError(null)
+      try {
+        await finalizeCase(chatMessages)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Unknown error')
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+    if (summaryReady || summarySaved || Boolean(selectedHistoryId)) {
+      setActiveTab('summary')
+      return
+    }
+    setError(summaryBlockReason ?? 'Summary is not ready yet.')
+  }
+
+  const renderStepFormContent = () => {
+    if (currentStep.id === 'patient') {
+      const nameField = fieldFromSections('identity', 'patient_name')
+      const birthField = fieldFromSections('identity', 'birthdate_cpr')
+      const nationalityField = fieldFromSections('identity', 'nationality')
+      const utcField = fieldFromSections('identity', 'utc_time')
+      const shipNameField = fieldFromSections('ship', 'ship_name')
+      const satelliteField = fieldFromSections('ship', 'satellite_call_no')
+      const extraIdentityFields =
+        sections
+          .find((section) => section.id === 'identity')
+          ?.fields.filter((field) => !['patient_name', 'birthdate_cpr', 'nationality', 'utc_time'].includes(field.key)) ?? []
+      const extraShipFields =
+        sections
+          .find((section) => section.id === 'ship')
+          ?.fields.filter((field) => !['ship_name', 'satellite_call_no'].includes(field.key)) ?? []
+      const allergiesSection = sections.find((section) => section.id === 'allergies_meds')
+
+      return (
+        <div className="formGrid">
+          <div className="fields">
+            {nameField
+              ? renderField(nameField, 'identity', indicators, setIndicators, formLockedToDoctor, {
+                  labelOverride: 'Full name',
+                })
+              : null}
+            {birthField ? renderField(birthField, 'identity', indicators, setIndicators, formLockedToDoctor) : null}
+            {nationalityField
+              ? renderField(nationalityField, 'identity', indicators, setIndicators, formLockedToDoctor)
+              : null}
+            {utcField
+              ? renderField(utcField, 'identity', indicators, setIndicators, formLockedToDoctor, { hint: '24h' })
+              : null}
+          </div>
+
+          <div className="sectionDivider">Vessel</div>
+
+          <div className="fields">
+            {shipNameField ? renderField(shipNameField, 'ship', indicators, setIndicators, formLockedToDoctor) : null}
+            {satelliteField ? renderField(satelliteField, 'ship', indicators, setIndicators, formLockedToDoctor) : null}
+          </div>
+
+          {(extraIdentityFields.length > 0 || extraShipFields.length > 0 || allergiesSection) && (
+            <>
+              <div className="nestedSectionTitle">Additional details</div>
+              {extraIdentityFields.length > 0 && (
+                <div className="fields">
+                  {extraIdentityFields.map((field) =>
+                    renderField(field, 'identity', indicators, setIndicators, formLockedToDoctor),
+                  )}
+                </div>
+              )}
+              {extraShipFields.length > 0 && (
+                <div className="fields">
+                  {extraShipFields.map((field) =>
+                    renderField(field, 'ship', indicators, setIndicators, formLockedToDoctor),
+                  )}
+                </div>
+              )}
+              {allergiesSection && (
+                <div className="fields">
+                  {allergiesSection.fields.map((field) =>
+                    renderField(field, allergiesSection.id, indicators, setIndicators, formLockedToDoctor),
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <div className="formGrid">
+        {currentStepSections.map((sec) => (
+          <div key={sec.id} className="formSection">
+            {currentStepSections.length > 1 && <div className="nestedSectionTitle">{sec.title}</div>}
+            {sec.description && <div className="formSectionDesc">{sec.description}</div>}
+            {sec.id === 'observation' ? (
+              <ObservationChart
+                chart={observationChart}
+                onChange={updateObservationChart}
+                lockedColumnIndexes={lockedObservationColumnIndexes}
+                missingMandatoryLabels={missingObservationFields}
+                showValidation={sendAttempted && !observationChartReady}
+              />
+            ) : (
+              <div className="fields">
+                {sec.fields.map((f) => renderField(f, sec.id, indicators, setIndicators, formLockedToDoctor))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const chatPanel = (
+    <aside className="chatCard">
+      <div className="chatCardHeader">
+        <div className="chatDoctorIcon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M9 3h6a2 2 0 0 1 2 2v1h2a2 2 0 0 1 2 2v3a6 6 0 0 1-6 6h-1.2l-2.3 2.3a1 1 0 0 1-1.7-.7V17H9a6 6 0 0 1-6-6V8a2 2 0 0 1 2-2h2V5a2 2 0 0 1 2-2Z"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinejoin="round"
+            />
+            <path d="M8 10h8M8 13h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          </svg>
+        </div>
+        <div>
+          <div className="chatDoctorTitle">AI Doctor</div>
+          <div className="chatDoctorStatus">Online — responds in seconds</div>
+        </div>
+      </div>
+
+      <div className="chatStream">
+        {!hasAllRequiredVitals && chatMessages.length > 0 && (
+          <div className="chatGateNotice">
+            <div className="chatGateTitle">Summary locked</div>
+            <div>Complete all required vitals before the clinical summary can be generated.</div>
+          </div>
+        )}
+        {hasAllRequiredVitals && pendingQuestions.length > 0 && (
+          <div className="chatGateNotice">
+            <div className="chatGateTitle">Clinical question pending</div>
+            <div>Answer the follow-up question below, then open the summary.</div>
+          </div>
+        )}
+        {chatMessages.length === 0 ? (
+          <div className="chatWelcome">
+            I&apos;m your radio medical doctor for this session. Complete the form on the left, then send me the case when
+            you&apos;re ready — I&apos;ll ask focused follow-up questions and help you reach a safe clinical summary.
+          </div>
+        ) : (
+          chatMessages.map((message) => (
+            <div key={message.id} className={`chatBubble ${message.role === 'user' ? 'user' : 'assistant'}`}>
+              <div className="chatText">{message.text}</div>
+              <div className="chatTime">{new Date(message.createdAt).toLocaleTimeString()}</div>
+            </div>
+          ))
+        )}
+        {busy && (
+          <div className="chatBubble assistant thinkingBubble">
+            <span className="thinkingSpinner" aria-hidden="true" />
+            AI doctor is reviewing the case...
+          </div>
+        )}
+      </div>
+
+      <div className="chatComposer">
+        <input
+          className="fieldInput chatComposerInput"
+          placeholder="Message the AI doctor..."
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              const msg = chatInput.trim()
+              if (!msg) return
+              setChatInput('')
+              void askDoctor(msg)
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="chatSendBtn"
+          aria-label="Send message"
+          onClick={() => {
+            const msg = chatInput.trim()
+            if (!msg) return
+            setChatInput('')
+            void askDoctor(msg)
+          }}
+          disabled={busy || chatInput.trim().length === 0}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="m5 12 14-7-4 7 4 7-14-7Z"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+    </aside>
+  )
 
   return (
     <div className="appShell">
       {isMenuOpen && <button type="button" className="menuBackdrop" aria-label="Close menu" onClick={() => setIsMenuOpen(false)} />}
       <aside className={`sidebar ${isMenuOpen ? 'open' : ''}`}>
         <div className="sidebarTop">
-          <div className="logoCard">
-            <div className="logoCrown">♛</div>
-            <div className="logoArc" />
-            <div className="logoText">DANISH MARITIME AUTHORITY</div>
-          </div>
-
-          <div className="brand">
-            <div className="brandAvatar">
-              {sidebarPatientName ? sidebarPatientName.slice(0, 1).toUpperCase() : '?'}
+          <div className="sidebarBrand">
+            <div className="sidebarBrandIcon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 3c-3.2 0-5.8 2.1-6.8 5.1-.4 1.2-.2 2.5.5 3.6l1.3 2.1v4.7c0 .8.7 1.5 1.5 1.5h6.9c.8 0 1.5-.7 1.5-1.5v-4.7l1.3-2.1c.7-1.1.9-2.4.5-3.6C17.8 5.1 15.2 3 12 3Z"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                />
+                <circle cx="12" cy="9.5" r="1.2" fill="currentColor" />
+                <path d="M8.5 20.5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
             </div>
-            <div className="brandCopy">
-              <div className="brandName">{sidebarPatientName || 'New report'}</div>
-              <div className="brandSub">{new Date().toLocaleDateString()}</div>
+            <div className="sidebarBrandText">
+              <div className="sidebarBrandTitle">Danish Maritime</div>
+              <div className="sidebarBrandSub">Authority · Radio Medical</div>
             </div>
           </div>
 
           <button
-            className="button sidebarBtn"
+            type="button"
+            className="newReportBtn"
             onClick={() => {
               handleClear()
               setIsMenuOpen(false)
             }}
             disabled={busy}
           >
-            New report
+            <span className="newReportIcon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </span>
+            <span className="newReportCopy">
+              <span className="newReportTitle">New report</span>
+              <span className="newReportHint">Start a fresh assessment</span>
+            </span>
+            <span className="newReportChevron" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
           </button>
 
+          <div className="sidebarSearchWrap">
+            <span className="sidebarSearchIcon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+                <path d="m16.5 16.5 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </span>
+            <input
+              className="sidebarSearch"
+              placeholder="Search reports..."
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div className="sidebarSectionTitle">History</div>
-        {history.length === 0 ? (
-          <div className="sidebarEmpty">No saved reports yet.</div>
+        <div className="sidebarSectionHead">
+          <div className="sidebarSectionTitle">History</div>
+          <div className="sidebarSectionCount">{filteredHistory.length}</div>
+        </div>
+
+        {filteredHistory.length === 0 ? (
+          <div className="sidebarEmpty">{history.length === 0 ? 'No saved reports yet.' : 'No matching reports.'}</div>
         ) : (
           <div className="historyList">
-            {history.map((h) => {
+            {filteredHistory.map((h) => {
               const when = new Date(h.createdAt).toLocaleString()
               const active = h.id === selectedHistoryId
               const completenessTier = completenessTierFromIndicators(h.indicators)
@@ -559,18 +866,33 @@ function App() {
                   }}
                   disabled={busy}
                 >
-                  <div className="historyTop">
-                    <div className="historyTitle">{historyTitle(h)}</div>
-                    <div className="historyIndicators">
-                      <div className={`historyBadge v-${clinicalTier}`} title="Clinical situation">
-                        V
+                  <div className="historyItemMain">
+                    <div className="historyFileIcon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M8 4h8l4 4v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinejoin="round"
+                        />
+                        <path d="M14 4v5h5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <div className="historyItemBody">
+                      <div className="historyTop">
+                        <div className="historyTitle">{historyTitle(h)}</div>
+                        <div className="historyIndicators">
+                          <div className={`historyBadge v-${clinicalTier}`} title="Clinical situation">
+                            V
+                          </div>
+                          <div className={`historyBadge c-${completenessTier}`} title="Report completeness">
+                            C
+                          </div>
+                        </div>
                       </div>
-                      <div className={`historyBadge c-${completenessTier}`} title="Report completeness">
-                        C
-                      </div>
+                      <div className="historyMeta">{when}</div>
                     </div>
                   </div>
-                  <div className="historyMeta">{when}</div>
                   <button
                     type="button"
                     className="iconBtn"
@@ -601,442 +923,172 @@ function App() {
           </div>
         )}
 
-        {history.length > 0 && (
-          <div className="sidebarFooter">
-            <button
-              className="button ghost sidebarBtn"
-              onClick={() => {
-                ;(async () => {
-                  try {
-                    await clearHistory()
-                    setHistory([])
-                    setSelectedHistoryId(null)
-                    setResult(null)
-                    setPendingQuestions([])
-                    setSummarySaved(false)
-                    setActiveTab('form')
-                    setIsMenuOpen(false)
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : 'Failed to clear history')
-                  }
-                })()
-              }}
-              disabled={busy}
-            >
-              Clear history
-            </button>
+        <div className="sidebarProfile">
+          <div className="sidebarProfileAvatar">DM</div>
+          <div className="sidebarProfileCopy">
+            <div className="sidebarProfileName">Dr. M. Sørensen</div>
+            <div className="sidebarProfileSub">On-duty · Esbjerg</div>
           </div>
-        )}
+          <button type="button" className="sidebarHelpBtn" aria-label="Help">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+              <path d="M9.5 9.5a2.7 2.7 0 0 1 5 1.4c0 2-2.5 2.2-2.5 4.1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              <circle cx="12" cy="17.2" r="1" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
       </aside>
 
-      <div className="container">
-        <header className="header">
+      <div className="mainArea">
+        <header className="pageHeader">
           <button type="button" className="menuToggle" aria-label="Open menu" onClick={() => setIsMenuOpen(true)}>
             <span className="menuIcon" />
           </button>
-          <div>
+          <div className="pageHeaderMain">
+            <div className="liveBadge">Live session</div>
             <h1>Radio Medical Assistant</h1>
             <p className="subtitle">
-              Structured workflow: complete the form by section, collaborate with the AI doctor in chat, and review a final
-              clinical summary.
+              Structured workflow: complete the form by section, collaborate with the AI doctor in chat, and review a
+              final clinical summary.
             </p>
           </div>
-        </header>
-
-        <main className="workspace card">
-          <div className="tabsRow">
-            <button type="button" className={`tabBtn ${activeTab === 'form' ? 'active' : ''}`} onClick={() => setActiveTab('form')}>
-              Form
-            </button>
-            {showChatTab && (
-              <button type="button" className={`tabBtn ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
-                Chat
-              </button>
-            )}
+          <div className="headerActions">
             {showSummaryTab && (
               <button
                 type="button"
-                className={`tabBtn ${activeTab === 'summary' ? 'active' : ''}`}
-                onClick={async () => {
-                  if (!result && canFinalizeNow && chatMessages.length > 0) {
-                    setBusy(true)
-                    setError(null)
-                    try {
-                      await finalizeCase(chatMessages)
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : 'Unknown error')
-                    } finally {
-                      setBusy(false)
-                    }
+                className={activeTab === 'summary' ? 'button ghost summaryNavBtn' : 'viewSummaryBtn'}
+                onClick={() => {
+                  if (activeTab === 'summary') {
+                    setActiveTab('form')
                     return
                   }
-                  if (summaryReady || summarySaved || Boolean(selectedHistoryId)) {
-                    setActiveTab('summary')
-                    return
-                  }
-                  setError(summaryBlockReason ?? 'Summary is not ready yet.')
+                  void openSummaryView()
                 }}
                 disabled={busy}
               >
-                Summary
+                {activeTab === 'summary' ? (
+                  'Back to form'
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M8 4h8l4 4v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinejoin="round"
+                      />
+                      <path d="M14 4v5h5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                      <path d="M9 12h6M9 15h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                    View clinical summary
+                  </>
+                )}
               </button>
             )}
-          </div>
-
-          {activeTab === 'form' && (
-            <section className="tabPanel">
-              {formLockedToDoctor && (
-                <div className="formLockedNotice" role="status">
-                  Form locked after first send to the AI doctor. Only the observation chart remains editable — use the Chat
-                  tab to add new columns while continuing the conversation.
+            {activeTab !== 'summary' && (
+              <div className="progressCard">
+                <div className="progressLabel">Progress</div>
+                <div className="progressTrack">
+                  <div className="progressFill" style={{ width: `${progressPercent}%` }} />
                 </div>
-              )}
-              <div className="stepper">
-                {FORM_STEPS.map((step, index) => (
+                <div className="progressValue">
+                  {activeStepIndex + 1} / {FORM_STEPS.length}
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {activeTab === 'summary' ? (
+          <section className="summaryShell">
+            {!result ? (
+              <div className="empty">No summary yet. Complete the form and start a chat with the AI doctor first.</div>
+            ) : (
+              <ClinicalSummary
+                indicators={indicators}
+                result={result}
+                vitalsQualityLabel={vitalsQuality.label}
+                vitalsQualityLevel={vitalsQuality.level}
+              />
+            )}
+          </section>
+        ) : (
+          <>
+            <div className="stepper">
+              {FORM_STEPS.map((step, index) => (
+                <button
+                  type="button"
+                  key={step.id}
+                  className={`stepBtn ${step.id === currentStep.id ? 'active' : ''}`}
+                  onClick={() => setActiveStepId(step.id)}
+                >
+                  <span className="stepIndex">{index + 1}</span>
+                  <span className="stepText">{step.shortLabel}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="contentGrid">
+              <section className="formCard">
+                {formLockedToDoctor && (
+                  <div className="formLockedNotice" role="status">
+                    Form locked after first send to the AI doctor. Update the observation chart here while you continue
+                    the conversation in the chat panel.
+                  </div>
+                )}
+
+                <div className="formCardHeader">
+                  <div className="formCardHeaderMain">
+                    <div className="stepOfBadge">
+                      Step {activeStepIndex + 1} of {FORM_STEPS.length}
+                    </div>
+                    <div className="formSectionTitle">{currentStep.title}</div>
+                    <div className="formSectionDesc">{currentStep.description}</div>
+                  </div>
+                  <div className="autosavePill">
+                    <span className="autosaveDot" aria-hidden="true" />
+                    {autosaveLabel}
+                  </div>
+                </div>
+
+                {renderStepFormContent()}
+
+                <div className="cardFooter">
                   <button
                     type="button"
-                    key={step.id}
-                    className={`stepBtn ${step.id === currentStep.id ? 'active' : ''}`}
-                    onClick={() => setActiveStepId(step.id)}
-                  >
-                    <span className="stepIndex">{index + 1}</span>
-                    <span className="stepText">{step.title}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="formSectionCard">
-                <div className="formSectionHeader">
-                  <div className="formSectionTitle">{currentStep.title}</div>
-                  <div className="formSectionDesc">{currentStep.description}</div>
-                </div>
-
-                <div className="formGrid">
-                  {currentStepSections.map((sec) => (
-                    <div key={sec.id} className="formSection">
-                      {currentStepSections.length > 1 && <div className="nestedSectionTitle">{sec.title}</div>}
-                      {sec.description && <div className="formSectionDesc">{sec.description}</div>}
-                      {sec.id === 'observation' ? (
-                        <ObservationChart
-                          chart={observationChart}
-                          onChange={updateObservationChart}
-                          lockedColumnIndexes={lockedObservationColumnIndexes}
-                          missingMandatoryLabels={missingObservationFields}
-                          showValidation={sendAttempted && !observationChartReady}
-                        />
-                      ) : (
-                        <div className="fields">
-                          {sec.fields.map((f) =>
-                            renderField(f, sec.id, indicators, setIndicators, formLockedToDoctor),
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="cardFooter">
-                <button
-                  className="button ghost"
-                  onClick={() => setActiveStepId(FORM_STEPS[Math.max(0, activeStepIndex - 1)].id)}
-                  disabled={activeStepIndex <= 0 || busy}
-                >
-                  ← Previous section
-                </button>
-                <div className="footerActions">
-                  <button
                     className="button ghost"
-                    onClick={() => setActiveStepId(FORM_STEPS[Math.min(FORM_STEPS.length - 1, activeStepIndex + 1)].id)}
-                    disabled={activeStepIndex >= FORM_STEPS.length - 1 || busy}
+                    onClick={() => setActiveStepId(FORM_STEPS[Math.max(0, activeStepIndex - 1)].id)}
+                    disabled={activeStepIndex <= 0 || busy}
                   >
-                    Next section →
+                    ← Previous section
                   </button>
-                  <button
-                    className={`button ${!canAskDoctor ? 'buttonAttention' : ''}`}
-                    onClick={() => void askDoctor()}
-                    disabled={busy}
-                  >
-                    {busy ? 'Analyzing…' : 'Send to AI doctor'}
-                  </button>
+                  <div className="footerActions">
+                    <button
+                      type="button"
+                      className="button ghost"
+                      onClick={() => setActiveStepId(FORM_STEPS[Math.min(FORM_STEPS.length - 1, activeStepIndex + 1)].id)}
+                      disabled={activeStepIndex >= FORM_STEPS.length - 1 || busy}
+                    >
+                      Next section →
+                    </button>
+                    <button
+                      type="button"
+                      className={`button ${!canAskDoctor ? 'buttonAttention' : ''}`}
+                      onClick={() => void askDoctor()}
+                      disabled={busy}
+                    >
+                      {busy ? 'Analyzing…' : 'Send to AI doctor'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
 
-          {activeTab === 'chat' && (
-            <section className="tabPanel chatPanel">
-              {formLockedToDoctor && (
-                <div className="formSectionCard chatObservationCard">
-                  <div className="formSectionHeader">
-                    <div className="formSectionTitle">Observation chart</div>
-                    <div className="formSectionDesc">
-                      The rest of the form is locked. Add new patient progress in the next available column while chatting
-                      with the AI doctor.
-                    </div>
-                  </div>
-                  <ObservationChart
-                    chart={observationChart}
-                    onChange={updateObservationChart}
-                    lockedColumnIndexes={lockedObservationColumnIndexes}
-                    missingMandatoryLabels={missingObservationFields}
-                    showValidation={false}
-                  />
-                </div>
-              )}
-              <div className="chatStream">
-                {!hasAllRequiredVitals && (
-                  <div className="chatGateNotice">
-                    <div className="chatGateTitle">Summary locked</div>
-                    <div>Complete all required vitals in the form or observation chart before the clinical summary can be generated.</div>
-                  </div>
-                )}
-                {hasAllRequiredVitals && pendingQuestions.length > 0 && (
-                  <div className="chatGateNotice">
-                    <div className="chatGateTitle">Clinical question pending</div>
-                    <div>Answer the follow-up question below in chat, then open Summary.</div>
-                  </div>
-                )}
-                {chatMessages.length === 0 ? (
-                  <div className="empty">Send the current form to start the doctor conversation.</div>
-                ) : (
-                  chatMessages.map((message) => (
-                    <div key={message.id} className={`chatBubble ${message.role === 'user' ? 'user' : 'assistant'}`}>
-                      <div className="chatText">{message.text}</div>
-                      <div className="chatTime">{new Date(message.createdAt).toLocaleTimeString()}</div>
-                    </div>
-                  ))
-                )}
-                {busy && (
-                  <div className="chatBubble assistant thinkingBubble">
-                    <span className="thinkingSpinner" aria-hidden="true" />
-                    AI doctor is reviewing the case...
-                  </div>
-                )}
-              </div>
+              {chatPanel}
+            </div>
+          </>
+        )}
 
-              <div className="chatComposer">
-                <input
-                  className="fieldInput"
-                  placeholder="Type additional findings, answers, or updates…"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      const msg = chatInput.trim()
-                      if (!msg) return
-                      setChatInput('')
-                      void askDoctor(msg)
-                    }
-                  }}
-                />
-                <button
-                  className="button"
-                  onClick={() => {
-                    const msg = chatInput.trim()
-                    if (!msg) return
-                    setChatInput('')
-                    void askDoctor(msg)
-                  }}
-                  disabled={busy || chatInput.trim().length === 0}
-                >
-                  Send
-                </button>
-                <button
-                  className="button ghost"
-                  onClick={async () => {
-                    if (!result && canFinalizeNow && chatMessages.length > 0) {
-                      setBusy(true)
-                      setError(null)
-                      try {
-                        await finalizeCase(chatMessages)
-                      } catch (e) {
-                        setError(e instanceof Error ? e.message : 'Unknown error')
-                      } finally {
-                        setBusy(false)
-                      }
-                      return
-                    }
-                    if (summaryReady || summarySaved || Boolean(selectedHistoryId)) {
-                      setActiveTab('summary')
-                      return
-                    }
-                    setError(summaryBlockReason ?? 'Summary is not ready yet.')
-                  }}
-                  disabled={busy}
-                >
-                  View summary
-                </button>
-              </div>
-            </section>
-          )}
-
-          {activeTab === 'summary' && (
-            <section className="tabPanel summaryPanel">
-              {!result ? (
-                <div className="empty">No summary yet. Complete the form and start a chat with the AI doctor first.</div>
-              ) : (
-                <>
-                  <div className="summaryCard">
-                    <div className="summaryTitle">Patient details</div>
-                    <div className="factsGrid">
-                      {patientFacts.map((fact) => (
-                        <div key={fact.label} className="factItem">
-                          <div className="factLabel">{fact.label}</div>
-                          <div className="factValue">{fact.value}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="summaryCard">
-                    <div className="summaryTitle">Clinical picture and vitals</div>
-                    <div className="clinicalBody">
-                      <div className="vitalsDialWrap">
-                        <div className={`vitalsDial vitals-${vitalsQuality.level}`}>
-                          <div className="vitalsDialInner">
-                            <div className="vitalsDialValue">{vitalsQuality.label}</div>
-                            <div className="vitalsDialLabel">Vitals quality</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="factsGrid">
-                        <div className="factItem wide">
-                          <div className="factLabel">Chief complaint</div>
-                          <div className="factValue">{fieldValue(indicators.problem_description) || 'Not provided'}</div>
-                        </div>
-                        {vitalsFacts.map((v) => (
-                          <div key={v.label} className="factItem">
-                            <div className="factLabel">{v.label}</div>
-                            <div className="factValue">
-                              {v.value && v.value !== '/' ? `${v.value}${v.unit ? ` ${v.unit}` : ''}` : 'Not provided'}
-                            </div>
-                          </div>
-                        ))}
-                        <div className="factItem wide">
-                          <div className="factLabel">Vitals feedback</div>
-                          <ul className="bullets">
-                            {vitalsQuality.feedback.map((line, idx) => (
-                              <li key={idx}>{line}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="summaryCard">
-                    <div className="summaryTitle">AI assessment</div>
-                    <div className="scoreChips">
-                      {completeness !== null && (
-                        <div className={`score score-tier-${scoreTier(completeness)}`}>
-                          <div className="scoreLabel">Completeness</div>
-                          <div className="scoreValue">{completeness}/100</div>
-                        </div>
-                      )}
-                      <div className={`qualityPill q-${vitalsQuality.level}`}>Vitals quality: {vitalsQuality.label}</div>
-                      {result.patient_evaluation && (
-                        <div className={`statusPill st-${result.patient_evaluation.status}`}>
-                          {result.patient_evaluation.status.toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="summaryBody">
-                      {(() => {
-                        const immediateActions =
-                          result.response.immediate_actions?.filter((line) => line.trim()) ??
-                          (result.response.next_step_message?.trim()
-                            ? [result.response.next_step_message.trim()]
-                            : [])
-                        const monitoringParameters =
-                          result.response.monitoring_parameters?.filter((line) => line.trim()) ?? []
-                        const escalationCriteria =
-                          result.response.escalation_criteria?.filter((line) => line.trim()) ?? []
-                        return (
-                          <>
-                            {immediateActions.length > 0 && (
-                              <>
-                                <div className="subTitle">Immediate actions</div>
-                                <ol className="numberedList">
-                                  {immediateActions.map((action, idx) => (
-                                    <li key={idx}>{action}</li>
-                                  ))}
-                                </ol>
-                              </>
-                            )}
-                            {monitoringParameters.length > 0 && (
-                              <>
-                                <div className="subTitle">Monitoring parameters</div>
-                                <ul className="bullets">
-                                  {monitoringParameters.map((line, idx) => (
-                                    <li key={idx}>{line}</li>
-                                  ))}
-                                </ul>
-                              </>
-                            )}
-                            {escalationCriteria.length > 0 && (
-                              <>
-                                <div className="subTitle">Escalation criteria</div>
-                                <ul className="bullets">
-                                  {escalationCriteria.map((line, idx) => (
-                                    <li key={idx}>{line}</li>
-                                  ))}
-                                </ul>
-                              </>
-                            )}
-                          </>
-                        )
-                      })()}
-                      {result.response.rationale_bullets.length > 0 && (
-                        <>
-                          <div className="subTitle">Rationale</div>
-                          <ul className="bullets">
-                            {result.response.rationale_bullets.map((b, idx) => (
-                              <li key={idx}>{b}</li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
-                      {result.response.questions_for_participants.length > 0 && (
-                        <>
-                          <div className="subTitle">Pending questions from AI doctor</div>
-                          <ul className="bullets">
-                            {result.response.questions_for_participants.map((q, idx) => (
-                              <li key={idx}>{q}</li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
-                      {result.patient_evaluation?.suspected_problems?.length ? (
-                        <>
-                          <div className="subTitle">Suspected problems</div>
-                          <ul className="bullets">
-                            {result.patient_evaluation.suspected_problems.map((p, idx) => (
-                              <li key={idx}>{p}</li>
-                            ))}
-                          </ul>
-                        </>
-                      ) : null}
-                      {result.patient_evaluation?.red_flags?.length ? (
-                        <>
-                          <div className="subTitle">Red flags</div>
-                          <ul className="bullets">
-                            {result.patient_evaluation.red_flags.map((flag, idx) => (
-                              <li key={idx}>{flag}</li>
-                            ))}
-                          </ul>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                </>
-              )}
-            </section>
-          )}
-
-          {error && <div className="error">Error: {error}</div>}
-        </main>
+        {error && <div className="error">Error: {error}</div>}
       </div>
     </div>
   )

@@ -1,21 +1,36 @@
-:root {
-  --text: #6987a4;
-  --text-h: #163b5f;
-  --bg: #f2f7fd;
-  --border: #dde7f2;
-  --code-bg: #f8fbff;
-  --accent: #2f86ff;
-  --accent-bg: #eaf3ff;
-  --accent-border: #9ec4f7;
-  --social-bg: #ffffff;
-  --shadow: 0 10px 24px -18px rgba(15, 44, 84, 0.45);
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+:root {
+  --text: #5a7189;
+  --text-h: #0b192e;
+  --text-muted: #8a9bb0;
+  --bg: #eef4f9;
+  --surface: #ffffff;
+  --border: #d8e3ef;
+  --border-light: #e8eef5;
+
+  --navy: #0b192e;
+  --navy-light: #132a45;
+  --teal: #1db8a8;
+  --teal-dark: #159688;
+  --teal-soft: #e6f7f5;
+  --teal-border: #9de0d8;
+
+  --sidebar-width: 292px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 4px 24px rgba(11, 25, 46, 0.06);
+  --shadow-soft: 0 2px 12px rgba(11, 25, 46, 0.04);
+
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --heading: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 17px/145% var(--sans);
-  letter-spacing: 0.18px;
+  font: 15px/150% var(--sans);
+  letter-spacing: -0.01em;
   color-scheme: light;
   color: var(--text);
   background: var(--bg);
@@ -23,68 +38,62 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 #root {
-  width: min(1360px, 100%);
-  margin: 0 auto;
-  border-inline: 1px solid var(--border);
+  width: 100%;
   min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: radial-gradient(1200px 700px at 20% 0%, rgba(47, 134, 255, 0.13), transparent 55%),
-    radial-gradient(1000px 700px at 80% 0%, rgba(29, 156, 255, 0.08), transparent 45%),
-    var(--bg);
+  background: linear-gradient(160deg, #f0f6fc 0%, #e8f0f8 45%, #eef4f9 100%);
 }
 
 h1,
 h2 {
   font-family: var(--heading);
-  font-weight: 500;
+  font-weight: 700;
   color: var(--text-h);
 }
 
 h1 {
-  font-size: 34px;
-  letter-spacing: -0.7px;
-  margin: 0 0 6px;
-  @media (max-width: 1024px) {
-    font-size: 27px;
-  }
+  font-size: 32px;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0 0 8px;
 }
+
 h2 {
-  font-size: 21px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   margin: 0;
-  @media (max-width: 1024px) {
-    font-size: 19px;
-  }
 }
+
 p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 code {
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: 13px;
   line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  padding: 3px 7px;
+  border-radius: 6px;
+  color: var(--text-h);
+  background: #f4f8fc;
 }

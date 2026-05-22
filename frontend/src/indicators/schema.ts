@@ -23,8 +23,8 @@ export const sections: SectionDef[] = [
     id: 'identity',
     title: 'Patient identity',
     fields: [
-      { key: 'patient_name', label: 'Name / title', type: 'text' },
-      { key: 'birthdate_cpr', label: 'Birthdate / CPR', type: 'text' },
+      { key: 'patient_name', label: 'Name / title', type: 'text', placeholder: 'Last, First' },
+      { key: 'birthdate_cpr', label: 'Birthdate / CPR', type: 'text', placeholder: 'DD/MM/YYYY — XXXX' },
       {
         key: 'gender',
         label: 'Gender',

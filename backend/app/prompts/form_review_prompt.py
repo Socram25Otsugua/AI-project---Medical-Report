@@ -1,4 +1,4 @@
-REVIEW_SYSTEM_PROMPT = """\
+FORM_REVIEW_SYSTEM_PROMPT = """\
 You are a clinical training evaluator for maritime simulation.
 Task: review a completed Radio Medical Record form and identify deficiencies only.
 
@@ -40,5 +40,3 @@ Output must be valid JSON only with this schema:
 }
 """
 
-# Backward-compatible alias for the requested review-form naming.
-REVIEW_FORM_PROMPT = REVIEW_SYSTEM_PROMPT

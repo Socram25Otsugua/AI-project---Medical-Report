@@ -10,9 +10,9 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from app.mcp import build_enriched_mcp_context, session_memory_mcp
 from app.models.schemas import ResponseResult
-from app.prompts import RESPONSE_SYSTEM_PROMPT
+from app.prompts import SUMMARY_ACTIONS_SYSTEM_PROMPT
 from app.services.analysis_guardrails import filter_questions, filter_temperature_labels
-from app.services.common_chain import build_chat_model, format_rag_context
+from app.services.llm_chain_utils import build_chat_model, format_rag_context
 from app.tools.memory import session_store
 from app.tools.rag import RagDeps, rag_search
 
@@ -31,7 +31,9 @@ def _filter_redundant_questions(report_text: str, questions: list[str]) -> list[
     return filtered
 
 
-def generate_next_step(rag: RagDeps, session_id: str, report_text: str, review_json: Dict[str, Any]) -> Dict[str, Any]:
+def generate_summary_actions(
+    rag: RagDeps, session_id: str, report_text: str, review_json: Dict[str, Any]
+) -> Dict[str, Any]:
     docs = rag_search(rag.vectorstore, query="ABCDE stabilization escalation guidance questions", k=4)
     context = format_rag_context(docs)
     mcp_context = build_enriched_mcp_context(report_text, include_checklist=True)
@@ -48,7 +50,7 @@ def generate_next_step(rag: RagDeps, session_id: str, report_text: str, review_j
     parser = JsonOutputParser(pydantic_object=ResponseResult)
     prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage(content=RESPONSE_SYSTEM_PROMPT),
+            SystemMessage(content=SUMMARY_ACTIONS_SYSTEM_PROMPT),
             ("human", "{payload}\n\nReturn only JSON."),
         ]
     )
@@ -66,7 +68,6 @@ def generate_next_step(rag: RagDeps, session_id: str, report_text: str, review_j
             return []
         return [str(item).strip() for item in value if str(item).strip()]
 
-    # Defensive normalization: some models can drift into review-style JSON.
     raw["immediate_actions"] = _as_str_list("immediate_actions")
     raw["monitoring_parameters"] = _as_str_list("monitoring_parameters")
     raw["escalation_criteria"] = _as_str_list("escalation_criteria")

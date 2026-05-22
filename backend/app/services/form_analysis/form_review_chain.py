@@ -14,14 +14,14 @@ from app.mcp import (
     vitals_coverage_score,
 )
 from app.models.schemas import ReviewResult
-from app.prompts import REVIEW_SYSTEM_PROMPT
+from app.prompts import FORM_REVIEW_SYSTEM_PROMPT
 from app.services.analysis_guardrails import filter_deficiencies, filter_temperature_labels
-from app.services.common_chain import build_chat_model, format_rag_context
+from app.services.llm_chain_utils import build_chat_model, format_rag_context
 from app.tools.memory import session_store
 from app.tools.rag import RagDeps, rag_search
 
 
-def review_report(rag: RagDeps, session_id: str, report_text: str) -> Dict[str, Any]:
+def analyze_form(rag: RagDeps, session_id: str, report_text: str) -> Dict[str, Any]:
     memory_snippet = session_memory_mcp.get_context_string(session_id)
     mcp_context = build_enriched_mcp_context(report_text, include_checklist=True)
 
@@ -38,7 +38,7 @@ def review_report(rag: RagDeps, session_id: str, report_text: str) -> Dict[str, 
     parser = JsonOutputParser(pydantic_object=ReviewResult)
     prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage(content=REVIEW_SYSTEM_PROMPT),
+            SystemMessage(content=FORM_REVIEW_SYSTEM_PROMPT),
             ("human", "{payload}\n\nReturn only JSON."),
         ]
     )

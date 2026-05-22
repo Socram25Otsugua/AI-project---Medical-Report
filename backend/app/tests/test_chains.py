@@ -4,8 +4,10 @@ from types import SimpleNamespace
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from app.services import chat_service, patient_eval_chain, response_chain, review_chain
-from app.services.common_chain import format_rag_context
+from app.services.chat import chat_turn_service
+from app.services.form_analysis import form_review_chain
+from app.services.llm_chain_utils import format_rag_context
+from app.services.summary import summary_actions_chain, summary_patient_eval_chain
 from app.tools.memory import InMemorySessionStore
 
 
@@ -35,7 +37,7 @@ def test_format_rag_context_joins_sources():
     assert "\n\n---\n\n" in out
 
 
-def test_review_report_uses_tools_and_updates_memory(monkeypatch):
+def test_analyze_form_uses_tools_and_updates_memory(monkeypatch):
     fake_chain = _FakeChain(
         {
             "extracted": {"x": 1},
@@ -46,17 +48,17 @@ def test_review_report_uses_tools_and_updates_memory(monkeypatch):
     )
     fake_store = InMemorySessionStore()
 
-    monkeypatch.setattr(review_chain, "session_store", fake_store)
-    monkeypatch.setattr(review_chain, "rag_search", lambda *args, **kwargs: [])
-    monkeypatch.setattr(review_chain, "build_chat_model", lambda: object())
-    monkeypatch.setattr(review_chain, "JsonOutputParser", JsonOutputParser)
+    monkeypatch.setattr(form_review_chain, "session_store", fake_store)
+    monkeypatch.setattr(form_review_chain, "rag_search", lambda *args, **kwargs: [])
+    monkeypatch.setattr(form_review_chain, "build_chat_model", lambda: object())
+    monkeypatch.setattr(form_review_chain, "JsonOutputParser", JsonOutputParser)
     monkeypatch.setattr(
         ChatPromptTemplate,
         "from_messages",
         staticmethod(lambda messages: fake_chain),
     )
     monkeypatch.setattr(
-        review_chain,
+        form_review_chain,
         "build_enriched_mcp_context",
         lambda report_text, include_checklist: {
             "missing_sections": {"missing": ["history"]},
@@ -65,13 +67,13 @@ def test_review_report_uses_tools_and_updates_memory(monkeypatch):
         },
     )
     monkeypatch.setattr(
-        review_chain,
+        form_review_chain,
         "session_memory_mcp",
         SimpleNamespace(get_context_string=lambda _sid: "No previous exchanges in this session."),
     )
 
     rag = SimpleNamespace(vectorstore=object())
-    out = review_chain.review_report(rag=rag, session_id="s1", report_text="report")
+    out = form_review_chain.analyze_form(rag=rag, session_id="s1", report_text="report")
 
     assert out["completeness_score"] == 90
     assert out["vitals_score"] == 20
@@ -83,7 +85,7 @@ def test_review_report_uses_tools_and_updates_memory(monkeypatch):
     assert payload["mcp"]["triage"]["priority"] == "urgent"
 
 
-def test_generate_next_step_returns_chain_output(monkeypatch):
+def test_generate_summary_actions_returns_chain_output(monkeypatch):
     fake_chain = _FakeChain(
         {
             "next_step_message": "Do ABCDE.",
@@ -93,17 +95,17 @@ def test_generate_next_step_returns_chain_output(monkeypatch):
     )
     fake_store = InMemorySessionStore()
 
-    monkeypatch.setattr(response_chain, "session_store", fake_store)
-    monkeypatch.setattr(response_chain, "rag_search", lambda *args, **kwargs: [])
-    monkeypatch.setattr(response_chain, "build_chat_model", lambda: object())
-    monkeypatch.setattr(response_chain, "JsonOutputParser", JsonOutputParser)
+    monkeypatch.setattr(summary_actions_chain, "session_store", fake_store)
+    monkeypatch.setattr(summary_actions_chain, "rag_search", lambda *args, **kwargs: [])
+    monkeypatch.setattr(summary_actions_chain, "build_chat_model", lambda: object())
+    monkeypatch.setattr(summary_actions_chain, "JsonOutputParser", JsonOutputParser)
     monkeypatch.setattr(
         ChatPromptTemplate,
         "from_messages",
         staticmethod(lambda messages: fake_chain),
     )
     monkeypatch.setattr(
-        response_chain,
+        summary_actions_chain,
         "build_enriched_mcp_context",
         lambda report_text, include_checklist: {
             "vitals": {"spo2_percent": 94},
@@ -111,13 +113,13 @@ def test_generate_next_step_returns_chain_output(monkeypatch):
         },
     )
     monkeypatch.setattr(
-        response_chain,
+        summary_actions_chain,
         "session_memory_mcp",
         SimpleNamespace(get_context_string=lambda _sid: "No previous exchanges in this session."),
     )
 
     rag = SimpleNamespace(vectorstore=object())
-    out = response_chain.generate_next_step(
+    out = summary_actions_chain.generate_summary_actions(
         rag=rag,
         session_id="s1",
         report_text="Level of consciousness (1-4): 2",
@@ -134,7 +136,7 @@ def test_generate_next_step_returns_chain_output(monkeypatch):
     assert payload["mcp"]["triage"]["priority"] == "urgent"
 
 
-def test_evaluate_patient_includes_mcp_vitals(monkeypatch):
+def test_generate_patient_evaluation_includes_mcp_vitals(monkeypatch):
     fake_chain = _FakeChain(
         {
             "status": "concerning",
@@ -145,17 +147,17 @@ def test_evaluate_patient_includes_mcp_vitals(monkeypatch):
     )
     fake_store = InMemorySessionStore()
 
-    monkeypatch.setattr(patient_eval_chain, "session_store", fake_store)
-    monkeypatch.setattr(patient_eval_chain, "rag_search", lambda *args, **kwargs: [])
-    monkeypatch.setattr(patient_eval_chain, "build_chat_model", lambda: object())
-    monkeypatch.setattr(patient_eval_chain, "JsonOutputParser", JsonOutputParser)
+    monkeypatch.setattr(summary_patient_eval_chain, "session_store", fake_store)
+    monkeypatch.setattr(summary_patient_eval_chain, "rag_search", lambda *args, **kwargs: [])
+    monkeypatch.setattr(summary_patient_eval_chain, "build_chat_model", lambda: object())
+    monkeypatch.setattr(summary_patient_eval_chain, "JsonOutputParser", JsonOutputParser)
     monkeypatch.setattr(
         ChatPromptTemplate,
         "from_messages",
         staticmethod(lambda messages: fake_chain),
     )
     monkeypatch.setattr(
-        patient_eval_chain,
+        summary_patient_eval_chain,
         "build_enriched_mcp_context",
         lambda report_text, include_checklist: {
             "vitals": {"spo2_percent": 91},
@@ -163,13 +165,13 @@ def test_evaluate_patient_includes_mcp_vitals(monkeypatch):
         },
     )
     monkeypatch.setattr(
-        patient_eval_chain,
+        summary_patient_eval_chain,
         "session_memory_mcp",
         SimpleNamespace(get_context_string=lambda _sid: "No previous exchanges in this session."),
     )
 
     rag = SimpleNamespace(vectorstore=object())
-    out = patient_eval_chain.evaluate_patient(
+    out = summary_patient_eval_chain.generate_patient_evaluation(
         rag=rag,
         session_id="s1",
         report_text="report",
@@ -182,12 +184,12 @@ def test_evaluate_patient_includes_mcp_vitals(monkeypatch):
     assert payload["mcp"]["triage"]["priority"] == "critical"
 
 
-def test_chat_doctor_turn_tracks_pending_questions(monkeypatch):
-    from app.services.conversation_state import clear_state
+def test_run_chat_turn_tracks_pending_questions(monkeypatch):
+    from app.services.chat.chat_conversation_state import clear_state
 
     clear_state("s-chat")
     monkeypatch.setattr(
-        chat_service,
+        chat_turn_service,
         "run_chat",
         lambda session_id, message, record_summary="": {
             "reply": "Continue monitoring.",
@@ -199,7 +201,7 @@ def test_chat_doctor_turn_tracks_pending_questions(monkeypatch):
     )
 
     rag = SimpleNamespace(vectorstore=object())
-    out = chat_service.chat_doctor_turn(
+    out = chat_turn_service.run_chat_turn(
         rag=rag, session_id="s-chat", report_text="report", user_message=""
     )
 
@@ -207,19 +209,19 @@ def test_chat_doctor_turn_tracks_pending_questions(monkeypatch):
     assert out["pending_questions"] == ["Is active bleeding controlled now?"]
     assert out["can_finalize_summary"] is False
 
-    answered = chat_service.chat_doctor_turn(
+    answered = chat_turn_service.run_chat_turn(
         rag=rag, session_id="s-chat", report_text="report", user_message="Bleeding is controlled now."
     )
     assert answered["pending_questions"] == []
     assert answered["can_finalize_summary"] is True
 
 
-def test_chat_doctor_turn_strips_duplicate_questions_from_reply(monkeypatch):
-    from app.services.conversation_state import clear_state
+def test_run_chat_turn_strips_duplicate_questions_from_reply(monkeypatch):
+    from app.services.chat.chat_conversation_state import clear_state
 
     clear_state("s-chat-strip")
     monkeypatch.setattr(
-        chat_service,
+        chat_turn_service,
         "run_chat",
         lambda session_id, message, record_summary="": {
             "reply": (
@@ -240,7 +242,7 @@ def test_chat_doctor_turn_strips_duplicate_questions_from_reply(monkeypatch):
     )
 
     rag = SimpleNamespace(vectorstore=object())
-    out = chat_service.chat_doctor_turn(
+    out = chat_turn_service.run_chat_turn(
         rag=rag, session_id="s-chat-strip", report_text="report", user_message=""
     )
 

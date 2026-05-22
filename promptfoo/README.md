@@ -6,8 +6,8 @@ Contract tests for the Radio Medical AI **review** and **response** system promp
 
 | Path | Purpose |
 |------|---------|
-| `prompts/review.txt` | Review chain system prompt (mirrors `backend/app/prompts/review_form_prompt.py`) |
-| `prompts/response.txt` | Response chain system prompt (mirrors `backend/app/prompts/response_prompt.py`) |
+| `prompts/review.txt` | Form review prompt (mirrors `backend/app/prompts/form_review_prompt.py`) |
+| `prompts/response.txt` | Summary actions prompt (mirrors `backend/app/prompts/summary_actions_prompt.py`) |
 | `fixtures/` | Synthetic training reports and stub review JSON for response tests |
 | `assertions/` | Reusable JavaScript assertions loaded via `file://` |
 | `lib/parse-output.cjs` | Shared JSON extraction from model output |

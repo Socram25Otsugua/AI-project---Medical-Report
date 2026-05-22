@@ -1,9 +1,9 @@
 from types import SimpleNamespace
 
-from app.services import chat_service
 from app.services.analysis_guardrails import filter_questions
-from app.services.chat_service import _is_actionable_follow_up, _strip_questions_from_reply
-from app.services.conversation_state import clear_state
+from app.services.chat import chat_turn_service
+from app.services.chat.chat_conversation_state import clear_state
+from app.services.chat.chat_turn_service import _is_actionable_follow_up, _strip_questions_from_reply
 
 
 def test_strip_questions_from_reply_removes_narrative_duplicates():
@@ -38,7 +38,7 @@ def test_is_actionable_follow_up_rejects_generic_status_prompts():
 def test_user_reply_clears_pending_and_unlocks_summary(monkeypatch):
     clear_state("s-reply")
     monkeypatch.setattr(
-        chat_service,
+        chat_turn_service,
         "run_chat",
         lambda session_id, message, record_summary="": {
             "reply": "Noted. Continue NPO and monitor closely. Best regards, Radio Medical Denmark",
@@ -52,13 +52,13 @@ def test_user_reply_clears_pending_and_unlocks_summary(monkeypatch):
     )
 
     rag = SimpleNamespace(vectorstore=object())
-    chat_service.chat_doctor_turn(
+    chat_turn_service.run_chat_turn(
         rag=rag,
         session_id="s-reply",
         report_text="report",
         user_message="",
     )
-    out = chat_service.chat_doctor_turn(
+    out = chat_turn_service.run_chat_turn(
         rag=rag,
         session_id="s-reply",
         report_text="report with update",

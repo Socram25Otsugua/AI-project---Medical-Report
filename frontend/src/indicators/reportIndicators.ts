@@ -78,7 +78,7 @@ export function vitalsQualityLevel(indicators?: IndicatorsState): VitalsQualityL
 
   if (severityPoints === 0) return 'green'
   if (severityPoints <= 2) return 'yellow'
-  if (severityPoints <= 4) return 'orange'
+  if (severityPoints <= 3) return 'orange'
   return 'red'
 }
 

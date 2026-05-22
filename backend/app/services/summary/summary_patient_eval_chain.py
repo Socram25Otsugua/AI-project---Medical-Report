@@ -9,14 +9,16 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from app.mcp import build_enriched_mcp_context, session_memory_mcp
 from app.models.schemas import PatientEvaluation
-from app.prompts import PATIENT_EVAL_SYSTEM_PROMPT
+from app.prompts import SUMMARY_PATIENT_EVAL_SYSTEM_PROMPT
 from app.services.analysis_guardrails import filter_temperature_labels
-from app.services.common_chain import build_chat_model, format_rag_context
+from app.services.llm_chain_utils import build_chat_model, format_rag_context
 from app.tools.memory import session_store
 from app.tools.rag import RagDeps, rag_search
 
 
-def evaluate_patient(rag: RagDeps, session_id: str, report_text: str, review_json: Dict[str, Any]) -> Dict[str, Any]:
+def generate_patient_evaluation(
+    rag: RagDeps, session_id: str, report_text: str, review_json: Dict[str, Any]
+) -> Dict[str, Any]:
     docs = rag_search(rag.vectorstore, query="ABCDE red flags triage assessment vitals", k=4)
     context = format_rag_context(docs)
     mcp_context = build_enriched_mcp_context(report_text, include_checklist=True)
@@ -33,7 +35,7 @@ def evaluate_patient(rag: RagDeps, session_id: str, report_text: str, review_jso
     parser = JsonOutputParser(pydantic_object=PatientEvaluation)
     prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage(content=PATIENT_EVAL_SYSTEM_PROMPT),
+            SystemMessage(content=SUMMARY_PATIENT_EVAL_SYSTEM_PROMPT),
             ("human", "{payload}\n\nReturn only JSON."),
         ]
     )
@@ -44,7 +46,6 @@ def evaluate_patient(rag: RagDeps, session_id: str, report_text: str, review_jso
     else:
         raw = dict(data)
 
-    # Defensive normalization: guarantee schema required by endpoint response model.
     if raw.get("status") not in {"ok", "concerning", "critical", "unknown"}:
         raw["status"] = "unknown"
     if not isinstance(raw.get("summary"), str) or not str(raw.get("summary")).strip():

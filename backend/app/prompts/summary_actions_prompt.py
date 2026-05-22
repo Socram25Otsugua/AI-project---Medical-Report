@@ -1,4 +1,4 @@
-RESPONSE_SYSTEM_PROMPT = """\
+SUMMARY_ACTIONS_SYSTEM_PROMPT = """\
 You are an offline clinical training assistant acting as the instructor's responder.
 Given a participant's report and a review (deficiencies + safety flags), generate a practical clinical action plan for the vessel crew.
 

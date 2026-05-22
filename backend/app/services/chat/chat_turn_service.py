@@ -11,7 +11,7 @@ from app.mcp.medical_guidelines_mcp import medical_guidelines_mcp
 from app.mcp.scenario_context_mcp import scenario_context_mcp
 from app.mcp.session_memory_mcp import session_memory_mcp
 from app.services.analysis_guardrails import filter_questions
-from app.services.conversation_state import get_state, normalize_question
+from app.services.chat.chat_conversation_state import get_state, normalize_question
 from app.config import OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL, OLLAMA_CHAT_TEMPERATURE
 from app.tools.rag import RagDeps
 
@@ -131,7 +131,7 @@ def _strip_questions_from_reply(reply: str, structured_questions: list[str]) -> 
         text = text[: signoff_match.start()].strip()
 
     text = re.sub(
-        r"(?is)^(?:i would like to ask(?: a few)? questions?|important follow[- ]?up questions?|"
+        r"(?is)(?:^|\n\s*)(?:i would like to ask(?: a few)? questions?|important follow[- ]?up questions?|"
         r"follow[- ]?up questions?|please (?:answer|respond to)|questions for you:?).*",
         "",
         text,
@@ -289,7 +289,7 @@ def run_chat(session_id: str, message: str, record_summary: str = "") -> dict:
     return parsed
 
 
-def chat_doctor_turn(rag: RagDeps, session_id: str, report_text: str, user_message: str = "") -> Dict[str, Any]:
+def run_chat_turn(rag: RagDeps, session_id: str, report_text: str, user_message: str = "") -> Dict[str, Any]:
     _ = rag  # kept for endpoint signature compatibility
     state = get_state(session_id)
     trimmed_user = user_message.strip()

@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 def _has_labeled_value(report_text: str, labels: list[str]) -> bool:
     for label in labels:
-        m = re.search(rf"{label}\s*:\s*(.+)", report_text, re.IGNORECASE)
+        m = re.search(rf"{label}(?:[^:\n]){{0,48}}:\s*(.+)", report_text, re.IGNORECASE)
         if not m:
             continue
         if m.group(1).strip():

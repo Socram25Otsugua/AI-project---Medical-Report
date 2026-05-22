@@ -9,9 +9,8 @@ test('blocks send and shows observation chart notice when chart is incomplete', 
 
   render(<App />)
   expect(screen.getByText(/Radio Medical Assistant/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /^Form$/i })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /^Chat$/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /^Summary$/i })).not.toBeInTheDocument()
+  expect(document.querySelector('.chatDoctorTitle')).toHaveTextContent('AI Doctor')
+  expect(screen.queryByRole('button', { name: /^Form$/i })).not.toBeInTheDocument()
 
   const btn = screen.getByRole('button', { name: /Send to AI doctor/i })
   expect(btn).not.toBeDisabled()
