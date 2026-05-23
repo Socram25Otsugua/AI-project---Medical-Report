@@ -23,8 +23,8 @@ export const sections: SectionDef[] = [
     id: 'identity',
     title: 'Patient identity',
     fields: [
-      { key: 'patient_name', label: 'Name / title', type: 'text' },
-      { key: 'birthdate_cpr', label: 'Birthdate / CPR', type: 'text' },
+      { key: 'patient_name', label: 'Name / title', type: 'text', placeholder: 'Last, First' },
+      { key: 'birthdate_cpr', label: 'Birthdate / CPR', type: 'text', placeholder: 'DD/MM/YYYY — XXXX' },
       {
         key: 'gender',
         label: 'Gender',
@@ -203,30 +203,9 @@ export const sections: SectionDef[] = [
   },
   {
     id: 'observation',
-    title: 'Observation chart (single row)',
-    description: 'This app captures one observation snapshot. You can paste multiple rows in the free-text timeline if needed.',
-    fields: [
-      { key: 'obs_date', label: 'Date', type: 'text' },
-      { key: 'obs_time', label: 'Time', type: 'text' },
-      { key: 'general_condition_1_4', label: 'General condition (1–4)', type: 'select', options: [{ label: '—', value: '' }, { label: '1', value: '1' }, { label: '2', value: '2' }, { label: '3', value: '3' }, { label: '4', value: '4' }] },
-      { key: 'obs_consciousness_1_4', label: 'Level of consciousness (1–4)', type: 'select', options: [{ label: '—', value: '' }, { label: '1', value: '1' }, { label: '2', value: '2' }, { label: '3', value: '3' }, { label: '4', value: '4' }] },
-      { key: 'obs_oxygen_l_min', label: 'Oxygen', type: 'number', unit: 'l/min' },
-      { key: 'obs_rr', label: 'Breathing frequency', type: 'number', unit: '/min' },
-      { key: 'obs_crt_sec', label: 'Capillary response', type: 'number', unit: 'sec' },
-      { key: 'obs_spo2', label: 'Oxygen saturation', type: 'number', unit: '%' },
-      { key: 'obs_hr', label: 'Heart rate', type: 'number', unit: 'bpm' },
-      { key: 'obs_bp_sys', label: 'Blood pressure systolic', type: 'number', unit: 'mmHg' },
-      { key: 'obs_bp_dia', label: 'Blood pressure diastolic', type: 'number', unit: 'mmHg' },
-      { key: 'obs_temp_mouth', label: 'Temp. (mouth)', type: 'number', unit: '°C' },
-      { key: 'obs_pupil_reaction', label: 'Pupil reaction', type: 'text', placeholder: 'e.g. Normal / Normal' },
-      { key: 'obs_venous_cannula', label: 'Venous cannula inserted', type: 'select', options: [{ label: '—', value: '' }, { label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }] },
-      { key: 'obs_iv_fluid_drops_min', label: 'IV fluid', type: 'number', unit: 'drops/min' },
-      { key: 'obs_fluid_intake', label: 'Fluid intake / drink', type: 'text' },
-      { key: 'obs_urine_24h', label: '24-hour urine', type: 'text' },
-      { key: 'obs_urine_sticks', label: 'Urine sticks', type: 'text' },
-      { key: 'obs_blood_sugar', label: 'Blood sugar', type: 'number', unit: 'mmol/L' },
-      { key: 'obs_malaria_test', label: 'Malaria test', type: 'text' },
-    ],
+    title: 'Observation chart',
+    description: 'Record patient progress across up to eight time points. Column 1 must be complete through temperature before sending to the AI doctor.',
+    fields: [],
   },
 ]
 
@@ -242,4 +221,6 @@ export function defaultIndicatorsState(): IndicatorsState {
   }
   return state
 }
+
+export const OBSERVATION_CHART_STATE_KEY = 'observation_chart'
 

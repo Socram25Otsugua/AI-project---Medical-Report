@@ -1,6 +1,18 @@
-Ship name: MV Example
+RADIO MEDICAL RECORD — TRAINING SIMULATION
+Vessel: MV Pacific Dawn
+Position: Not recorded
+Date/Time (UTC): Not recorded
 
-Problem description: Fever and confusion started today.
+Patient: Unknown
+Chief complaint: Fever and confusion started today.
 
-Actions performed: None documented.
+Problem description: Crew reports patient is hot to touch and intermittently confused. No formal vital signs taken yet.
 
+A — Airway: Not assessed.
+B — Breathing: Not assessed.
+C — Circulation: Not assessed.
+D — Disability: Confused when spoken to; no AVPU/GCS documented.
+E — Exposure: Not assessed.
+
+Interventions: None documented.
+Observation plan: None documented.

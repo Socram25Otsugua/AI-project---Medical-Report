@@ -1,13 +1,17 @@
 {
-  "name": "promptfoo-tests",
+  "name": "radio-medical-prompt-evals",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Promptfoo contract tests for Radio Medical AI review and response chains",
   "type": "module",
   "scripts": {
-    "test:prompts": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_WAL_MODE=true PROMPTFOO_DISABLE_TELEMETRY=true sh -c 'promptfoo eval -c promptfooconfig.review.yaml && promptfoo eval -c promptfooconfig.response.yaml'"
+    "test:prompts": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_WAL_MODE=true PROMPTFOO_DISABLE_TELEMETRY=true sh -c 'promptfoo eval -c promptfooconfig.review.yaml && promptfoo eval -c promptfooconfig.response.yaml'",
+    "test:prompts:review": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_WAL_MODE=true PROMPTFOO_DISABLE_TELEMETRY=true promptfoo eval -c promptfooconfig.review.yaml",
+    "test:prompts:response": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_WAL_MODE=true PROMPTFOO_DISABLE_TELEMETRY=true promptfoo eval -c promptfooconfig.response.yaml",
+    "test:prompts:all": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_WAL_MODE=true PROMPTFOO_DISABLE_TELEMETRY=true promptfoo eval -c promptfooconfig.yaml",
+    "view": "promptfoo view"
   },
   "devDependencies": {
     "promptfoo": "^0.116.0"
   }
 }
-

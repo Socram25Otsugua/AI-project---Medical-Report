@@ -1,42 +1,37 @@
-description: Radio Medical Record prompt tests (review) — Ollama
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: Radio Medical AI — review prompt contract tests (Ollama)
 
 providers:
   - id: ollama:chat:llama3.1
     config:
       temperature: 0.2
       passthrough:
-        format: "json"
+        format: json
 
 prompts:
-  - prompts/review.txt
+  - file://prompts/review.txt
+
+defaultTest:
+  options:
+    provider: ollama:chat:llama3.1
+  assert:
+    - type: contains-json
 
 tests:
-  - description: returns JSON with completeness score
+  - description: Review — returns schema-valid JSON for a complete ABCDE report
+    tags: [review, schema, regression]
     vars:
       report_text: file://fixtures/report_minimal.txt
     assert:
-      - type: contains-json
       - type: javascript
-        value: |
-          const match = (output || '').match(/\{[\s\S]*\}/);
-          if (!match) return false;
-          const out = JSON.parse(match[0]);
-          return (
-            out &&
-            typeof out.completeness_score === 'number' &&
-            Array.isArray(out.deficiencies) &&
-            Array.isArray(out.safety_flags)
-          );
+        value: file://assertions/review-schema.cjs
 
-  - description: penalizes missing vitals
+  - description: Review — assigns lower completeness when vitals are undocumented
+    tags: [review, completeness, regression]
     vars:
       report_text: file://fixtures/report_missing_vitals.txt
     assert:
-      - type: contains-json
       - type: javascript
-        value: |
-          const match = (output || '').match(/\{[\s\S]*\}/);
-          if (!match) return false;
-          const out = JSON.parse(match[0]);
-          return typeof out.completeness_score === 'number' && out.completeness_score <= 70;
-
+        value: file://assertions/review-schema.cjs
+      - type: javascript
+        value: file://assertions/review-penalizes-incomplete-vitals.cjs

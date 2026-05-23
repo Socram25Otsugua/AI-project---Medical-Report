@@ -16,7 +16,11 @@ export type ReviewResult = {
 }
 
 export type ResponseResult = {
-  next_step_message: string
+  immediate_actions?: string[]
+  monitoring_parameters?: string[]
+  escalation_criteria?: string[]
+  /** Legacy field from older saved reports. */
+  next_step_message?: string
   rationale_bullets: string[]
   questions_for_participants: string[]
 }
@@ -30,6 +34,17 @@ export type AnalyzeRequest = {
   session_id: string
   report_text: string
   locale: 'en-UK' | 'pt-PT'
+}
+
+export type ChatTurnRequest = AnalyzeRequest & {
+  user_message?: string
+}
+
+export type ChatTurnResult = {
+  assistant_message: string
+  questions_for_participants: string[]
+  pending_questions: string[]
+  can_finalize_summary: boolean
 }
 
 export type PatientEvaluation = {

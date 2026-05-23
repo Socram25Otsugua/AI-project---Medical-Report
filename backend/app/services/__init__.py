@@ -1,15 +1,6 @@
-from app.services.llm_orchestrator import evaluate_patient, generate_next_step, review_report
-from tools.memory import ChatTurn, InMemorySessionStore, session_store
-from tools.rag import RagDeps, load_or_build_vectorstore, rag_search
+"""LLM services grouped by responsibility.
 
-__all__ = [
-    "ChatTurn",
-    "InMemorySessionStore",
-    "RagDeps",
-    "evaluate_patient",
-    "generate_next_step",
-    "load_or_build_vectorstore",
-    "rag_search",
-    "review_report",
-    "session_store",
-]
+- ``form_analysis`` — ABCDE form review and completeness scoring
+- ``summary`` — final clinical summary (actions, patient evaluation, builder)
+- ``chat`` — live Radio Medical doctor chat turns during form entry
+"""

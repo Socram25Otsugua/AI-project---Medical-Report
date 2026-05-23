@@ -1,0 +1,63 @@
+ABCDE MARITIME MEDICAL ASSESSMENT GUIDELINES
+Centre for Maritime Health Services - Clinical Reference
+
+=== A - AIRWAY ===
+The airway must be assessed first in any emergency.
+- Check if the airway is clear and unobstructed
+- Look for signs of obstruction: noisy breathing, stridor, cyanosis
+- If airway is blocked: perform jaw lift, apply suction, insert Guedel airway
+- Suspected neck/spine injury: immobilize before airway maneuvers
+- Administer oxygen via nasal cannula (up to 5 L/min) or Hudson mask (above 10 L/min)
+- If patient is not breathing: initiate CPR immediately
+- Document time CPR was initiated
+
+=== B - BREATHING ===
+Assess breathing after airway is secured.
+- Normal breathing rate: 12-16 breaths per minute
+- Below 12: bradypnoea - may indicate CNS depression or fatigue
+- Above 20: tachypnoea - may indicate pain, anxiety, hypoxia, or infection
+- Above 30: severe respiratory distress - immediate intervention required
+- Normal oxygen saturation: 95-100%
+- SpO2 below 95%: supplemental oxygen required
+- SpO2 below 90%: critical - immediate high-flow oxygen, consider MEDEVAC
+- Breathing patterns: shallow breathing may indicate pain or pneumothorax
+- Assess: rate, depth, symmetry, use of accessory muscles
+
+=== C - CIRCULATION ===
+Assess circulatory status after breathing is confirmed.
+- Normal heart rate: 60-80 beats per minute
+- Tachycardia above 100 bpm: may indicate pain, shock, dehydration, infection
+- Bradycardia below 60 bpm: may indicate heart block, medication effect, hypothermia
+- Normal blood pressure: 120-140 systolic / 60-90 diastolic
+- Hypotension systolic below 90: shock - immediate IV access, fluids
+- Capillary refill time: normal less than 2 seconds
+- Capillary refill above 2 seconds: poor perfusion, consider shock
+- Skin color: pale indicates poor perfusion or anemia
+- Bluish (cyanosis): indicates hypoxia
+- Insert venous cannula if capillary refill above 2 seconds or shock suspected
+- Measure pulse at wrist (radial), neck (carotid), or groin (femoral)
+
+=== D - DISABILITY ===
+Assess neurological status.
+- Level of consciousness scale:
+  1 = Awake, alert and well orientated
+  2 = Unclear, but responds to questions
+  3 = Does not respond to questions but responds to pain stimuli
+  4 = Unconscious and unresponsive to pain stimuli
+- Level 3 or 4: CRITICAL - contact Radio Medical immediately
+- Check for convulsions: may indicate epilepsy, head injury, hypoglycemia
+- Check for paralysis: may indicate spinal injury or stroke
+- Pupil reaction: normal is equal and reactive to light (documented as +/+)
+- Unequal pupils or non-reactive: may indicate serious head injury or stroke
+- Document exact Glasgow Coma Scale if possible
+
+=== E - EXPOSE ===
+Full body examination.
+- Perform top-to-toe examination in all trauma cases
+- Normal oral temperature: 36.5 degrees Celsius
+- Hypothermia: below 35 degrees - warm patient, avoid rough handling
+- Fever: above 38 degrees - assess for infection source
+- Hyperthermia: above 40 degrees - active cooling required
+- Document all visible injuries: lacerations, bruising, swelling, deformity
+- Check for signs of internal bleeding: abdominal rigidity, distension
+- Preserve patient dignity during examination

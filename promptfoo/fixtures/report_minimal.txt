@@ -1,11 +1,18 @@
-Name: Test Patient
-Ship name: MV Example
-Coordinates: 54.0N 1.2W
+RADIO MEDICAL RECORD — TRAINING SIMULATION
+Vessel: MV Nordic Star
+Position: 54°12′N 001°08′W
+Date/Time (UTC): 2026-05-21 14:32
 
-Problem description: Patient fell and has chest pain and shortness of breath.
+Patient: J. Andersen (male, 58)
+Chief complaint: Fall on deck with chest pain and shortness of breath.
 
-Breathing: Fast. Oxygen saturation 93%.
-Pulse per min: 105. Blood pressure: 120/75.
+A — Airway: Patent. No stridor.
+B — Breathing: Tachypnoea. SpO₂ 93% on room air.
+C — Circulation: Pulse 105/min, regular. BP 120/75 mmHg. Capillary refill 2 s.
+D — Disability: Alert, oriented. GCS 15.
+E — Exposure: No external bleeding. Abdomen soft, non-tender.
 
-Actions performed: Oxygen via mask.
+History: Slip on wet deck 20 minutes ago. No loss of consciousness reported.
+Interventions: High-flow oxygen via mask started.
 
+Observation plan: Reassess ABCDE every 15 minutes; log vitals.
