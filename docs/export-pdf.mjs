@@ -1,18 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import playwright from '../promptfoo/node_modules/playwright/index.js';
 import { marked } from 'marked';
+
+const { chromium } = playwright;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const mdPath = path.join(__dirname, 'PROJECT_REPORT.md');
 const pdfPath = path.join(__dirname, 'PROJECT_REPORT.pdf');
 const screenshotPath = path.join(__dirname, 'assets/frontend-screenshot.png');
 
-const md = fs.readFileSync(mdPath, 'utf8');
+const mdRaw = fs.readFileSync(mdPath, 'utf8');
 const screenshotData = fs.readFileSync(screenshotPath).toString('base64');
 
-let htmlBody = marked.parse(md);
+let htmlBody = marked.parse(mdRaw);
+htmlBody = htmlBody.replace(/<hr\s*\/?>/gi, '');
 htmlBody = htmlBody.replace(
   'assets/frontend-screenshot.png',
   `data:image/png;base64,${screenshotData}`,
@@ -49,10 +52,51 @@ const html = `<!DOCTYPE html>
       word-break: break-word;
     }
     img { max-width: 100%; height: auto; margin: 1em auto; display: block; }
-    hr { border: none; border-top: 1px solid #ddd; margin: 1.5em 0; }
+    hr { display: none; }
+    a { color: #333; text-decoration: none; }
     blockquote { border-left: 3px solid #ddd; margin: 1em 0; padding-left: 1em; color: #444; }
     ul, ol { padding-left: 1.4em; }
-    div[align="center"] { text-align: center; }
+    .cover-page {
+      text-align: center;
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      page-break-after: always;
+    }
+    .cover-kicker {
+      font-size: 11pt;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #556;
+      margin: 0 0 1.2em;
+    }
+    .cover-title {
+      font-size: 28pt;
+      line-height: 1.15;
+      margin: 0 0 0.8em;
+      page-break-before: auto;
+      color: #0b192e;
+    }
+    .cover-meta {
+      margin: 0.25em 0;
+      font-size: 11pt;
+      color: #333;
+    }
+    .cover-screenshot {
+      max-width: 92%;
+      margin: 1.6em auto 0.8em;
+      border: 1px solid #d8e3ef;
+      border-radius: 12px;
+      box-shadow: 0 8px 28px rgba(11, 25, 46, 0.08);
+    }
+    .cover-caption {
+      max-width: 85%;
+      margin: 0 auto;
+      font-size: 10pt;
+      color: #555;
+    }
   </style>
 </head>
 <body>${htmlBody}</body>

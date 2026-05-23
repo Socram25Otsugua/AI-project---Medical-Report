@@ -12,6 +12,7 @@ backend/.data/
 frontend/node_modules/
 frontend/dist/
 promptfoo/node_modules/
+docs/node_modules/
 promptfoo/.promptfoo/
 
 # Promptfoo cache/artifacts
